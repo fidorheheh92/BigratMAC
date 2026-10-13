@@ -1,0 +1,100 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        ====================================================================
+        WindowChrome.xaml — the BigRat title bar's window controls
+        ====================================================================
+
+        BigRat draws its own title bar (see MainWindow.xaml) so the window
+        reads as one continuous surface instead of "Windows frame bolted onto
+        an application". The window itself keeps every native behaviour:
+        dragging, double-click to maximise, Aero snap, resize borders and the
+        taskbar entry all still come from Windows.
+
+        The controls are three circles — the familiar macOS traffic-light idea
+        — but they stay on the RIGHT in the Windows order, because that is what
+        a Windows user's hand expects.
+
+        Three things here are deliberate, and worth not undoing by accident:
+
+          * The colour is on at rest, not only under the pointer. Showing it
+            on hover alone left the strip as three grey pips that told you
+            nothing until you were already on top of one, which rather
+            defeated the point of using a language people already read.
+
+          * There is no glyph. No X on close, no box on maximise. The colour
+            is the whole signal, and a 9px stroke inside a 20px dot only
+            muddied it.
+
+          * The dot is 20px inside a 48px hit area. Traffic lights are meant
+            to be struck without aiming.
+
+        Because colour now carries everything, the tooltips are load-bearing
+        rather than decorative: with nothing drawn but the dots, they are how
+        the three buttons are told apart on a first visit.
+
+        To move them to the left instead, move the StackPanel that holds them
+        to Grid.Column="0" in MainWindow.xaml and swap the order of the three
+        buttons. Nothing else needs to change.
+    -->
+
+    <Style x:Key="WindowButton.Base" TargetType="Button">
+        <Setter Property="Width" Value="48"/>
+        <Setter Property="Height" Value="48"/>
+        <Setter Property="Focusable" Value="False"/>
+        <!-- A neutral default so the base style is usable on its own. All
+             three concrete styles below override it with a semantic colour. -->
+        <Setter Property="Background" Value="{StaticResource Brush.WindowDot}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <!-- The transparent Grid is the 48px hit area. It is the
+                         only thing in here with any size; the dot is what you
+                         see, and it is what the pointer actually lights. -->
+                    <Grid Background="Transparent">
+                        <Ellipse x:Name="Dot"
+                                 Width="20" Height="20"
+                                 Fill="{TemplateBinding Background}"/>
+                        <!-- Exactly the same size and position as the dot, so
+                             hover lifts the colour that is already there
+                             rather than adding a second shape on top. -->
+                        <Ellipse x:Name="Lift"
+                                 Width="20" Height="20"
+                                 Fill="{StaticResource Brush.Text}"
+                                 Opacity="0"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Lift" Property="Opacity" Value="0.18"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Lift" Property="Opacity" Value="0.34"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WindowButton.Close" TargetType="Button" BasedOn="{StaticResource WindowButton.Base}">
+        <Setter Property="ToolTip" Value="Close"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Error}"/>
+    </Style>
+
+    <Style x:Key="WindowButton.Minimize" TargetType="Button" BasedOn="{StaticResource WindowButton.Base}">
+        <Setter Property="ToolTip" Value="Minimize"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Warning}"/>
+    </Style>
+
+    <!-- The one accent-driven dot: maximise keeps the application's own
+         colour, so it re-skins with the accent picker on the Settings page. -->
+    <Style x:Key="WindowButton.Maximize" TargetType="Button" BasedOn="{StaticResource WindowButton.Base}">
+        <Setter Property="ToolTip" Value="Maximize"/>
+        <Setter Property="Background" Value="{DynamicResource Brush.Accent}"/>
+    </Style>
+
+</ResourceDictionary>

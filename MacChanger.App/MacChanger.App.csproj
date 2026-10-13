@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\MacChanger.Core\MacChanger.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    The brand image is embedded in the assembly and read back through a pack
+    URI ("/Assets/bigrat.jpg" in MainWindow.xaml). The .NET SDK gives *.jpg no
+    default build action, so without this line the file would ship as a
+    do-nothing None item and the window would fail to load at startup.
+  -->
+  <ItemGroup>
+    <Resource Include="Assets\bigrat.jpg" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+</Project>

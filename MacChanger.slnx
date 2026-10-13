@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="MacChanger.App/MacChanger.App.csproj" />
+  <Project Path="MacChanger.Core/MacChanger.Core.csproj" />
+  <Project Path="MacChanger.Tests/MacChanger.Tests.csproj" />
+</Solution>

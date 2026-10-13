@@ -1,0 +1,245 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        ====================================================================
+        Palette.xaml — the single source of truth for BigRat's visual identity
+        ====================================================================
+
+        Everything visual lives here: surfaces, text, status colours, type,
+        radii and spacing. Nothing else in the app should hard-code a colour.
+
+        THE SURFACE RAMP
+        ================
+        BigRat is built from four surfaces that each step up by a *small*
+        amount. There is no pure black and no harsh jump anywhere:
+
+            Canvas   #0D0E11   the window background — very dark charcoal
+            Sidebar  #131519   the navigation rail and the title bar
+            Card     #191B1F   content panels, one step above the sidebar
+            Elevated #22252A   controls and chips that sit on a card
+
+        Cards do NOT have bright 1px outlines. They read as separate surfaces
+        because of the colour step and the spacing around them, which is how
+        real dark interfaces are built. Borders exist only where a control
+        genuinely needs an edge (inputs, dividers), and even then they are one
+        or two steps above the surface they sit on, never a bright line.
+
+        RE-THEMING
+        ==========
+        The accent brushes are the only ones the Settings page rewrites at
+        runtime, so every accent-driven property in the app uses
+        DynamicResource. Change the accent and the whole application re-skins,
+        pale tints included — see Services/AccentPalette.cs, which derives
+        Brush.AccentSoft from whichever accent is chosen.
+    -->
+
+    <!-- ======================== Surfaces ============================== -->
+
+    <SolidColorBrush x:Key="Brush.Canvas"         Color="#0D0E11"/>
+    <SolidColorBrush x:Key="Brush.Sidebar"        Color="#131519"/>
+    <SolidColorBrush x:Key="Brush.Card"           Color="#191B1F"/>
+    <SolidColorBrush x:Key="Brush.CardHover"      Color="#1F2227"/>
+    <SolidColorBrush x:Key="Brush.Elevated"       Color="#22252A"/>
+    <SolidColorBrush x:Key="Brush.ElevatedHover"  Color="#2B2F35"/>
+
+    <!-- Recessed areas: list wells, the settings file path, read-only blocks -->
+    <SolidColorBrush x:Key="Brush.Well"           Color="#0F1013"/>
+
+    <!-- Separators. Deliberately faint: one step above the surface they sit on. -->
+    <SolidColorBrush x:Key="Brush.Divider"        Color="#24272C"/>
+
+    <!-- ========================= Accent =============================== -->
+
+    <SolidColorBrush x:Key="Brush.Accent"         Color="#C1FF72"/>
+    <SolidColorBrush x:Key="Brush.AccentText"     Color="#C1FF72"/>
+
+    <!-- The accent held back to a surface tint. Used for the selected
+         navigation item so it does not glow, and for quiet accent badges. -->
+    <SolidColorBrush x:Key="Brush.AccentSoft"     Color="#2B3625"/>
+    <SolidColorBrush x:Key="Brush.AccentSoftHover" Color="#35422C"/>
+
+    <!-- ========================== Text ================================ -->
+
+    <SolidColorBrush x:Key="Brush.Text"           Color="#F2F3F5"/>
+    <SolidColorBrush x:Key="Brush.TextSecondary"  Color="#9AA0A9"/>
+    <SolidColorBrush x:Key="Brush.TextTertiary"   Color="#686E78"/>
+    <SolidColorBrush x:Key="Brush.TextDisabled"   Color="#4A4F57"/>
+
+    <!-- Text drawn on top of the lime accent -->
+    <SolidColorBrush x:Key="Brush.TextOnAccent"   Color="#0C0E0A"/>
+
+    <!-- ========================= Status =============================== -->
+
+    <SolidColorBrush x:Key="Brush.Positive"       Color="#C1FF72"/>
+    <SolidColorBrush x:Key="Brush.Warning"        Color="#F5A524"/>
+    <SolidColorBrush x:Key="Brush.Error"          Color="#F2555A"/>
+    <SolidColorBrush x:Key="Brush.Info"           Color="#6BA8FF"/>
+    <SolidColorBrush x:Key="Brush.Neutral"        Color="#8B909A"/>
+
+    <!-- A device that is simply not connected: quieter than "neutral". Not a
+         text colour, so it is named separately from Brush.TextTertiary even
+         though the value matches. -->
+    <SolidColorBrush x:Key="Brush.Muted"          Color="#686E78"/>
+
+    <!-- Tinted backgrounds for status chips: the status colour at ~16% over
+         a card, baked to a solid so no opacity stacking is needed. The status
+         converters build these keys by appending "Soft". -->
+    <SolidColorBrush x:Key="Brush.PositiveSoft"   Color="#263019"/>
+    <SolidColorBrush x:Key="Brush.WarningSoft"    Color="#332611"/>
+    <SolidColorBrush x:Key="Brush.ErrorSoft"      Color="#351A1C"/>
+    <SolidColorBrush x:Key="Brush.InfoSoft"       Color="#1B2534"/>
+    <SolidColorBrush x:Key="Brush.NeutralSoft"    Color="#24272C"/>
+    <SolidColorBrush x:Key="Brush.MutedSoft"      Color="#212429"/>
+
+    <!-- Window control dots. Each of the three styles in
+         Themes/WindowChrome.xaml overrides this with its own semantic colour,
+         so this neutral is only the base's default. -->
+    <SolidColorBrush x:Key="Brush.WindowDot"      Color="#33373E"/>
+
+    <!-- ======================== Typography ============================ -->
+
+    <!--
+        WPF resolves a comma-separated FontFamily list by falling back through
+        it, so this picks up Segoe UI Variable on Windows 11 and Segoe UI
+        everywhere else. No font is installed or bundled: the app stays a
+        single small executable and always finds a native, hinted face.
+    -->
+    <FontFamily x:Key="Font.UI">Segoe UI Variable Text, Segoe UI, Inter, Arial</FontFamily>
+    <FontFamily x:Key="Font.Display">Segoe UI Variable Display, Segoe UI Variable Text, Segoe UI, Inter, Arial</FontFamily>
+    <FontFamily x:Key="Font.Mono">Cascadia Mono, Consolas, Courier New</FontFamily>
+
+    <!-- ========================== Metrics ============================= -->
+
+    <CornerRadius x:Key="Radius.Card">22</CornerRadius>
+    <CornerRadius x:Key="Radius.Control">14</CornerRadius>
+    <CornerRadius x:Key="Radius.Chip">10</CornerRadius>
+    <CornerRadius x:Key="Radius.Small">8</CornerRadius>
+
+    <!--
+        Rows on the navigation rail. Deliberately its own token rather than a
+        reuse of Radius.Small, which happens to hold the same number: the two
+        mean different things and should be free to move apart. 14 — the
+        control radius — is what a full-width row used to draw, and on a 36px
+        row that is more than a third of the height, so the row read as a pill
+        rather than as a rounded rectangle.
+    -->
+    <CornerRadius x:Key="Radius.Rail">8</CornerRadius>
+
+    <!--
+        The page surface in MainWindow.xaml. Only the top-left corner is
+        rounded: that is the corner that tucks under the rail and the title
+        strip, while the rest are the window's own edges and are squared off by
+        the shell. Held at the same value as Radius.Card so the content sheet
+        and the cards on it speak the same corner language — a CornerRadius
+        resource cannot reference another, so the two are kept in step by hand.
+    -->
+    <CornerRadius x:Key="Radius.Content">22,0,0,0</CornerRadius>
+
+    <!--
+        Spacing. Sized for a compact window: the page margin and the card
+        padding together are what make the application feel tight or airy, so
+        they are the levers that got pulled to reclaim the last 10-15%.
+    -->
+    <Thickness x:Key="Pad.Card">20</Thickness>
+    <Thickness x:Key="Pad.CardTight">16</Thickness>
+    <Thickness x:Key="Pad.Page">26,22,26,26</Thickness>
+
+    <!-- ======================== Text styles =========================== -->
+
+    <!-- Page heading. Deliberately modest: a utility app should not shout. -->
+    <Style x:Key="Text.PageTitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+    </Style>
+
+    <Style x:Key="Text.PageSubtitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="20"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="Margin" Value="0,7,0,0"/>
+    </Style>
+
+    <!-- Small quiet label that sits above a block of content -->
+    <Style x:Key="Text.SectionLabel" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+    </Style>
+
+    <Style x:Key="Text.CardTitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+    </Style>
+
+    <Style x:Key="Text.Body" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="20"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+    </Style>
+
+    <Style x:Key="Text.BodyStrong" TargetType="TextBlock" BasedOn="{StaticResource Text.Body}">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="Text.Secondary" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="18"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+    </Style>
+
+    <Style x:Key="Text.Mono" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Mono}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+    </Style>
+
+    <!--
+        The headline MAC address. DynamicResource so the accent picker on the
+        Settings page re-colours it along with everything else.
+    -->
+    <Style x:Key="Text.MonoAccent" TargetType="TextBlock" BasedOn="{StaticResource Text.Mono}">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}"/>
+    </Style>
+
+    <Style x:Key="Text.MonoSecondary" TargetType="TextBlock" BasedOn="{StaticResource Text.Mono}">
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+    </Style>
+
+    <!--
+        The one large figure in the application: the Connection card's current
+        download rate.
+
+        Set in the display face rather than the mono one, because it is a
+        standalone number to be read at a glance rather than a column to be
+        compared downwards. Numeral alignment is forced to Tabular all the
+        same: this figure is replaced once a second in place, and proportional
+        digits would shift the word beside it sideways on every tick.
+    -->
+    <Style x:Key="Text.Metric" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="34"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+    </Style>
+
+</ResourceDictionary>

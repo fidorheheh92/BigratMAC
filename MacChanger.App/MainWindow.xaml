@@ -1,0 +1,466 @@
+<Window x:Class="MacChanger.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BigRat — MAC Address Utility"
+        Height="690" Width="1075" MinHeight="580" MinWidth="920"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        Background="{StaticResource Brush.Canvas}"
+        Foreground="{StaticResource Brush.Text}"
+        FontFamily="{StaticResource Font.UI}"
+        FontSize="13"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True">
+
+    <!--
+        ====================================================================
+        MainWindow.xaml — the BigRat application shell
+        ====================================================================
+
+        The window draws its own title area so BigRat reads as one continuous
+        surface rather than "a Windows frame with an app inside it".
+
+        WindowStyle="None" takes the system frame away; the WindowChrome block
+        below puts the *behaviour* back — dragging anywhere in the top 48px,
+        double-click to maximise, Aero snap, a 6px resize border, and the
+        standard taskbar entry. AllowsTransparency is deliberately left off:
+        turning it on would cost native resizing and snapping for no visual
+        gain, because nothing here needs to be see-through.
+
+        The window's own corners are rounded by the shell rather than by us —
+        see ApplyWindowCorners in MainWindow.xaml.cs. That is why the
+        WindowChrome below keeps CornerRadius="0": a radius there is applied by
+        clipping the window to a hard-edged region, which is both uglier and
+        unnecessary when the compositor will round it properly.
+
+        LAYOUT
+            a 190px rail (64px when collapsed)  |  a 48px title strip above
+        The rail runs the full height of the window, and the button at its foot
+        narrows it to an icon-only 64px. The title strip spans only the content
+        column, which is why the brand sits in the rail's top 48px — the two
+        line up.
+    -->
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="48"
+                      ResizeBorderThickness="6"
+                      CornerRadius="0"
+                      GlassFrameThickness="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <!--
+                Auto, not 190. The rail is collapsed by animating its own
+                Width, and a fixed column would pin the rail at its starting
+                size while refusing to let the content column take up the
+                slack — the rail would shrink inside its slot and leave a gap.
+            -->
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================== Rail ============================== -->
+        <!-- No border: the rail is one step up from the window background, and
+             that step is what separates it. See the surface ramp in Palette.
+
+             Width lives on the Border rather than on the column so the
+             collapse animation has a plain double to work with. The
+             code-behind overrides it from the saved setting before the window
+             is first shown, so the remembered width is in place on the first
+             frame rather than animating in at startup. -->
+        <Border x:Name="Rail" Grid.Column="0" Width="190"
+                Background="{StaticResource Brush.Sidebar}">
+            <DockPanel Margin="12,0,12,12">
+
+                <!--
+                    Brand: the mark on its own, with no wordmark beside it. The
+                    name only ever crowded the rail, and the window title
+                    already says what the application is.
+
+                    The asset is a photograph — Assets/bigrat.jpg, 992x688, and
+                    a JPEG, so it has no transparent background to cut out — so
+                    it is shown as a rounded tile filled edge to edge rather
+                    than as a floating mark.
+
+                    Painting it through the Border's own Background is
+                    deliberate. A Border rounds its background to CornerRadius
+                    but does *not* clip a child, so an <Image> in here would
+                    leave four square corners poking out past the rounding.
+
+                    To swap in a proper logo later, replace the file. If it is a
+                    square PNG with transparency, widen the CornerRadius and
+                    change the ImageBrush's Stretch back to Uniform.
+                -->
+                <Border DockPanel.Dock="Top"
+                        Width="34" Height="34" CornerRadius="10"
+                        Margin="0,7,0,7"
+                        VerticalAlignment="Center"
+                        ToolTip="BigRat">
+                    <!-- Left-aligned on the open rail, centred on the
+                         collapsed one. HorizontalAlignment is set here rather
+                         than as an attribute because a local value outranks a
+                         style trigger, and the trigger would never fire. -->
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Border.Background>
+                        <ImageBrush ImageSource="/Assets/bigrat.jpg"
+                                    Stretch="UniformToFill"/>
+                    </Border.Background>
+                </Border>
+
+                <!--
+                    Collapse / expand the rail, at its very foot.
+
+                    Docked before the adapter row below it: with DockPanel the
+                    first child declared against an edge is the one that gets
+                    the edge, so declaring this one first is what puts the
+                    toggle underneath the adapter row rather than above it.
+
+                    The chevron points the way the rail is about to move. The
+                    two directions are separate geometries rather than one
+                    rotated, so they carry the same round caps and joins as the
+                    rest of the icon family.
+                -->
+                <Button DockPanel.Dock="Bottom"
+                        Click="RailToggleClick"
+                        Margin="0,6,0,0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+                            <Setter Property="ToolTip" Value="Collapse sidebar"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
+                                    <Setter Property="ToolTip" Value="Expand sidebar"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <!--
+                        Sized on the Path itself rather than wrapped in a
+                        Viewbox, the way the Settings expander's chevron is.
+
+                        Stretch is the whole point. It defaults to None, and a
+                        Path drawn that way renders at its geometry's raw
+                        coordinates while reporting a desired size measured from
+                        the origin — so a glyph whose coordinates sit away from
+                        the origin lands off centre in whatever box contains it.
+                        These two are drawn at x 5..10 and x 14..19 on the 24
+                        grid, which pushed the chevron about a third of the box
+                        away from centre. Uniform scaling translates the geometry
+                        back to the origin and centres it, so the box and the ink
+                        finally agree.
+                    -->
+                    <Path Width="6" Height="10"
+                          Stretch="Uniform"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}">
+                        <Path.Style>
+                            <Style TargetType="Path" BasedOn="{StaticResource Icon.Path}">
+                                <Setter Property="Data" Value="{StaticResource Icon.ChevronLeft}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
+                                        <Setter Property="Data" Value="{StaticResource Icon.ChevronRight}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
+                </Button>
+
+                <!--
+                    The adapter you are working with, at the foot of the rail.
+
+                    This replaces the old multi-line "SELECTED ADAPTER" block.
+                    It has no card, no label and no border — it is a row on the
+                    rail that happens to be clickable, so it belongs to the
+                    navigation instead of sitting on top of it.
+
+                    Docked before the navigation list below, which is the last
+                    child and therefore fills whatever is left in between.
+
+                    On a collapsed rail the name and the status line are
+                    dropped and the icon takes their place. There is room for
+                    exactly one thing in a 40px row, and the icon is the one
+                    that says what the row leads to; the adapter's name and its
+                    status are both on the page this opens, and the status note
+                    in the title strip still reports a change from anywhere.
+                -->
+                <StackPanel DockPanel.Dock="Bottom">
+                    <Border Style="{StaticResource Divider}" Margin="9,0,9,8"/>
+                    <Button Style="{StaticResource Button.Row}"
+                            Click="AdapterRowClick"
+                            ToolTip="Open the MAC Changer page for this adapter">
+                        <StackPanel>
+                            <Viewbox Width="17" Height="17" HorizontalAlignment="Center">
+                                <Viewbox.Style>
+                                    <Style TargetType="Viewbox">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Viewbox.Style>
+                                <Path Data="{StaticResource Icon.MacChanger}"
+                                      Style="{StaticResource Icon.Path}"
+                                      Stroke="{StaticResource Brush.TextSecondary}"/>
+                            </Viewbox>
+
+                            <TextBlock Text="{Binding SelectedAdapter.Name, FallbackValue=No adapter selected, TargetNullValue=No adapter selected}"
+                                       FontSize="12.5"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource Brush.Text}"
+                                       TextTrimming="CharacterEllipsis">
+                                <!-- Visibility is not set as an attribute: a
+                                     local value would outrank this trigger. -->
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <!--
+                                Only rendered when an adapter is actually
+                                selected, so an empty row stays a single line
+                                instead of leaving a stray dot behind — and
+                                never on a collapsed rail, where the icon has
+                                taken the row over.
+
+                                Both conditions live in the style rather than
+                                on the element: Visibility must not also be set
+                                as an attribute, because a local value outranks
+                                a trigger and the trigger would silently do
+                                nothing.
+                            -->
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding HasSelection}" Value="True"/>
+                                                    <Condition Binding="{Binding Settings.SidebarCollapsed}" Value="False"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                         Fill="{Binding SelectedAdapter.Status, Converter={StaticResource StatusBrush}}"/>
+                                <TextBlock Text="{Binding SelectedAdapter.Status}"
+                                           Margin="7,0,0,0"
+                                           VerticalAlignment="Center"
+                                           FontSize="11"
+                                           Foreground="{StaticResource Brush.TextSecondary}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!--
+                    Navigation. Five rows, icon first, no section headings —
+                    there are not enough destinations to need any.
+
+                    IsChecked is NOT set here: the constructor navigates to the
+                    Dashboard and that call sets the check itself. Setting it in
+                    markup would fire Checked while the page host further down
+                    this file has not been created yet.
+                -->
+                <StackPanel x:Name="NavList" VerticalAlignment="Top" Margin="0,12,0,0">
+                    <RadioButton x:Name="NavDashboard"
+                                 Style="{StaticResource NavItem}" GroupName="Nav"
+                                 Content="Dashboard"
+                                 Tag="{StaticResource Icon.Dashboard}"
+                                 CommandParameter="Dashboard"
+                                 Checked="NavChecked"/>
+
+                    <RadioButton x:Name="NavMacChanger"
+                                 Style="{StaticResource NavItem}" GroupName="Nav"
+                                 Content="MAC Changer"
+                                 Tag="{StaticResource Icon.MacChanger}"
+                                 CommandParameter="MAC Changer"
+                                 Checked="NavChecked"/>
+
+                    <RadioButton x:Name="NavHwid"
+                                 Style="{StaticResource NavItem}" GroupName="Nav"
+                                 Content="Hardware ID"
+                                 Tag="{StaticResource Icon.Hwid}"
+                                 CommandParameter="HWID"
+                                 Checked="NavChecked"/>
+
+                    <RadioButton x:Name="NavHistory"
+                                 Style="{StaticResource NavItem}" GroupName="Nav"
+                                 Content="History"
+                                 Tag="{StaticResource Icon.History}"
+                                 CommandParameter="History"
+                                 Checked="NavChecked"/>
+
+                    <RadioButton x:Name="NavSettings"
+                                 Style="{StaticResource NavItem}" GroupName="Nav"
+                                 Content="Settings"
+                                 Tag="{StaticResource Icon.Settings}"
+                                 CommandParameter="Settings"
+                                 Checked="NavChecked"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ======================= Title strip and page ===================== -->
+        <!--
+            This column carries Brush.Sidebar behind everything, and that is
+            what makes the rounded corner below visible. The page surface is
+            Brush.Canvas, and so is the window, so a notch cut out of the
+            surface's top-left corner showed Canvas behind Canvas: the rounding
+            was being drawn exactly as asked and simply could not be seen.
+            Painting the rail's own surface across the column first gives the
+            notch something to reveal.
+
+            Nothing else changes: the title strip and the page surface between
+            them cover the rest of the column, so this only ever shows through
+            that one corner. See Radius.Content in Palette.xaml.
+        -->
+        <Grid Grid.Column="1" Background="{StaticResource Brush.Sidebar}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!--
+                The title area carries the window controls and, when there is
+                genuinely something to report, a transient note.
+
+                There is no permanent status bar anywhere in BigRat. An idle
+                window shows an empty strip: no "Ready — N adapter(s)
+                detected.", because the adapter list on the page already says
+                that and saying it twice is noise. The note below appears only
+                while a scan or a write is running, or when something failed.
+
+                The strip needs no background of its own: the whole content
+                column is already Brush.Sidebar, so the strip and the rail read
+                as one band across the top of the window. That surface is one
+                step above the page canvas, which is the whole point of the
+                surface ramp in Palette.xaml.
+            -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid Margin="26,0,16,0" VerticalAlignment="Center"
+                      Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVisible}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                             Fill="{DynamicResource Brush.Accent}"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding StatusMessage}"
+                               Margin="9,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{StaticResource Brush.TextSecondary}"
+                               TextTrimming="CharacterEllipsis"/>
+                </Grid>
+
+                <!--
+                    Three coloured dots, in the order a Windows user's hand
+                    expects. They carry their colour at rest rather than only
+                    under the pointer, and they hold no glyph at all — the
+                    colour is the whole signal, which is the one thing a
+                    traffic light never needs to explain.
+
+                    Colour is therefore doing all the work, so the tooltips
+                    below matter more than they usually would: with no X and no
+                    box drawn anywhere, they are how the buttons are told apart
+                    on a first visit.
+
+                    Each one needs IsHitTestVisibleInChrome — the strip is the
+                    window's caption, and without it the clicks would be
+                    swallowed by the drag handler.
+                -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="0,0,10,0">
+
+                    <Button Style="{StaticResource WindowButton.Minimize}"
+                            Click="MinimizeClick"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+
+                    <!--
+                        Note the style is supplied only as a property element
+                        below, never also as a Style attribute: setting the same
+                        property twice is invalid markup. The element's BasedOn
+                        already inherits everything from WindowButton.Maximize.
+
+                        Maximise and restore are the same button, so the only
+                        thing that follows the window's state is the tooltip.
+                    -->
+                    <Button Click="MaximizeClick"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource WindowButton.Maximize}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                 Value="Maximized">
+                                        <Setter Property="ToolTip" Value="Restore"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <Button Style="{StaticResource WindowButton.Close}"
+                            Click="CloseClick"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </StackPanel>
+            </Grid>
+
+            <!--
+                The page surface, and the one rounded corner in the layout.
+
+                Only the top-left is rounded. That is the corner where the
+                surface meets the rail and the title strip, so rounding it makes
+                the content read as a single sheet tucked under the chrome
+                rather than as a rectangle butted up against two others. The
+                other three corners stay square because they *are* the window's
+                own edges, and the shell rounds those.
+
+                The column's sidebar background is what makes the rounding
+                visible at all: the notch shows that surface through it. The
+                page surface itself is unchanged — still exactly the same
+                colour as the window.
+
+                No clipping is needed here. A Border does not clip its children
+                to the corner radius, but Pad.Page keeps every page's content
+                well clear of this corner, and the pages themselves paint no
+                background of their own.
+
+                Pages are created once and cached, so switching away and back
+                does not lose what was typed. See MainWindow.xaml.cs.
+            -->
+            <Border Grid.Row="1"
+                    Background="{StaticResource Brush.Canvas}"
+                    CornerRadius="{StaticResource Radius.Content}">
+                <ContentControl x:Name="PageHost"/>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

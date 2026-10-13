@@ -1,0 +1,137 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        ====================================================================
+        Icons.xaml — BigRat's icon set
+        ====================================================================
+
+        One family, one set of rules, so nothing in the app looks borrowed
+        from a different place:
+
+          * every glyph is drawn on a 24 x 24 grid
+          * stroke only, never filled — colour comes from Stroke
+          * round caps and round joins, ~1.6px stroke (see Icon.Path)
+          * 1.5px of empty margin all round, so nothing clips when scaled
+
+        Render one like this:
+
+            <Viewbox Width="18" Height="18">
+                <Path Data="{StaticResource Icon.Dashboard}"
+                      Style="{StaticResource Icon.Path}"
+                      Stroke="{StaticResource Brush.TextSecondary}"/>
+            </Viewbox>
+
+        Wrapping the Path in a Viewbox is what keeps the stroke crisp;
+        stretching the Path directly would clip it at the edges.
+    -->
+
+    <!-- ========================== Navigation ============================ -->
+
+    <!-- Bento layout: one large tile, one tall tile, one wide tile -->
+    <Geometry x:Key="Icon.Dashboard">M6,3.5 H10 A2.5,2.5 0 0 1 12.5,6 V10 A2.5,2.5 0 0 1 10,12.5 H6 A2.5,2.5 0 0 1 3.5,10 V6 A2.5,2.5 0 0 1 6,3.5 Z M17,3.5 H18.5 A2,2 0 0 1 20.5,5.5 V10.5 A2,2 0 0 1 18.5,12.5 H17 A2,2 0 0 1 15,10.5 V5.5 A2,2 0 0 1 17,3.5 Z M5.5,15 H18.5 A2,2 0 0 1 20.5,17 V18.5 A2,2 0 0 1 18.5,20.5 H5.5 A2,2 0 0 1 3.5,18.5 V17 A2,2 0 0 1 5.5,15 Z</Geometry>
+
+    <!-- Two addresses trading places -->
+    <Geometry x:Key="Icon.MacChanger">M4,9 H20 M16.5,5.5 L20,9 L16.5,12.5 M20,15 H4 M7.5,11.5 L4,15 L7.5,18.5</Geometry>
+
+    <!-- Processor package with pins -->
+    <Geometry x:Key="Icon.Hwid">M8,5 H16 A3,3 0 0 1 19,8 V16 A3,3 0 0 1 16,19 H8 A3,3 0 0 1 5,16 V8 A3,3 0 0 1 8,5 Z M10.5,10 H13.5 A1,1 0 0 1 14.5,11 V13.5 A1,1 0 0 1 13.5,14.5 H10.5 A1,1 0 0 1 9.5,13.5 V11 A1,1 0 0 1 10.5,10 Z M9,2 V5 M12,2 V5 M15,2 V5 M9,19 V22 M12,19 V22 M15,19 V22 M2,9 H5 M2,12 H5 M2,15 H5 M19,9 H22 M19,12 H22 M19,15 H22</Geometry>
+
+    <Geometry x:Key="Icon.History">M12,3.5 A8.5,8.5 0 0 1 20.5,12 A8.5,8.5 0 0 1 3.5,12 A8.5,8.5 0 0 1 12,3.5 Z M12,7.4 V12.2 L15.7,14.4</Geometry>
+
+    <!-- Three rails with their handles -->
+    <Geometry x:Key="Icon.Settings">M6,3.5 V20.5 M12,3.5 V20.5 M18,3.5 V20.5 M4,9 H8 M10,14.5 H14 M16,7.5 H20</Geometry>
+
+    <!-- ======================== Window controls ========================= -->
+
+    <!--
+        The window control glyphs are drawn on a 12 grid rather than the 24
+        grid the rest of the set uses, because they were sized for the small
+        dot inside the title bar's buttons.
+
+        Nothing draws them at the moment: the traffic lights in
+        Themes/WindowChrome.xaml carry their colour and no glyph at all. They
+        are kept because the 12-grid geometry is not recorded anywhere else,
+        and re-drawing it is the only thing standing between the current design
+        and one that shows an X again. Every one of them has a non-degenerate
+        bounding box, since a perfectly flat geometry — a bare horizontal line —
+        would give a Viewbox nothing to scale against.
+
+        If the design settles on colour-only for good, these can go.
+    -->
+    <Geometry x:Key="Icon.WinClose">M2,2 L10,10 M10,2 L2,10</Geometry>
+    <Geometry x:Key="Icon.WinMinimize">M2,5.2 H10 V6.8 H2 Z</Geometry>
+    <Geometry x:Key="Icon.WinMaximize">M2,2 H10 V10 H2 Z</Geometry>
+    <Geometry x:Key="Icon.WinRestore">M5,5 H10 V10 H5 Z M2,8 V2 H8</Geometry>
+
+    <!-- =========================== Actions ============================== -->
+
+    <Geometry x:Key="Icon.Refresh">M20,12 A8,8 0 1 1 12,4 M12,4 L8.8,1.4 M12,4 L8.8,6.6</Geometry>
+    <Geometry x:Key="Icon.Check">M4.5,12.5 L9.5,17.5 L19.5,6.5</Geometry>
+    <Geometry x:Key="Icon.Chevron">M7,10 L12,15 L17,10</Geometry>
+
+    <!-- The same chevron turned through 90. Drawn rather than rotated with a
+         RenderTransform so they carry the same stroke caps and join as the
+         rest of the family. Both point the way the rail is about to move:
+         left collapses it, right opens it again. -->
+    <Geometry x:Key="Icon.ChevronLeft">M10,7 L5,12 L10,17</Geometry>
+    <Geometry x:Key="Icon.ChevronRight">M14,7 L19,12 L14,17</Geometry>
+    <Geometry x:Key="Icon.ArrowRight">M4,12 H19 M19,12 L14,7 M19,12 L14,17</Geometry>
+
+    <!--
+        Traffic direction, for the Connection card's down/up pair. A shaft and
+        a two-stroke head, on the same 24 grid and with the same clear margin
+        as the rest of the set, so they take the family's stroke weight and
+        caps rather than carrying their own.
+    -->
+    <Geometry x:Key="Icon.ArrowDown">M12,4 V19 M12,19 L7,14 M12,19 L17,14</Geometry>
+    <Geometry x:Key="Icon.ArrowUp">M12,20 V5 M12,5 L7,10 M12,5 L17,10</Geometry>
+    <Geometry x:Key="Icon.Trash">M4.5,7 H19.5 M9,7 V4.5 H15 V7 M6.5,7 L7.6,20.5 H16.4 L17.5,7 M10,10.5 V17 M14,10.5 V17</Geometry>
+
+    <!-- Die: the "give me a random address" action -->
+    <Geometry x:Key="Icon.Random">M5.5,4.5 H18.5 A1,1 0 0 1 19.5,5.5 V18.5 A1,1 0 0 1 18.5,19.5 H5.5 A1,1 0 0 1 4.5,18.5 V5.5 A1,1 0 0 1 5.5,4.5 Z M8,8 A1,1 0 0 1 10,8 A1,1 0 0 1 8,8 Z M14,8 A1,1 0 0 1 16,8 A1,1 0 0 1 14,8 Z M8,14 A1,1 0 0 1 10,14 A1,1 0 0 1 8,14 Z M14,14 A1,1 0 0 1 16,14 A1,1 0 0 1 14,14 Z</Geometry>
+
+    <!-- =========================== Status =============================== -->
+
+    <Geometry x:Key="Icon.Warning">M12,3.5 L21.5,20 H2.5 Z M12,9.5 V14.5 M11,17.3 A1,1 0 0 1 13,17.3 A1,1 0 0 1 11,17.3 Z</Geometry>
+    <Geometry x:Key="Icon.Info">M12,3.5 A8.5,8.5 0 0 1 20.5,12 A8.5,8.5 0 0 1 3.5,12 A8.5,8.5 0 0 1 12,3.5 Z M12,11 V16.5 M11,7.7 A1,1 0 0 1 13,7.7 A1,1 0 0 1 11,7.7 Z</Geometry>
+    <Geometry x:Key="Icon.Shield">M12,3 L19.5,6 V11.5 C19.5,16.2 16.2,19.8 12,21.2 C7.8,19.8 4.5,16.2 4.5,11.5 V6 Z M9.2,11.6 L11.2,13.6 L15,9.4</Geometry>
+
+    <!-- ====================== Hardware (HWID page) ====================== -->
+
+    <!-- RAM module -->
+    <Geometry x:Key="Icon.Memory">M3.5,7 H20.5 V15 H3.5 Z M6.5,15 V18.5 M10.5,15 V18.5 M14.5,15 V18.5 M18.5,15 V18.5 M8,10 V12 M12,10 V12 M16,10 V12</Geometry>
+
+    <!-- Display adapter -->
+    <Geometry x:Key="Icon.Gpu">M3.5,5 H20.5 V16 H3.5 Z M9,19.5 H15 M12,16 V19.5</Geometry>
+
+    <!-- Storage drive -->
+    <Geometry x:Key="Icon.Disk">M3.5,6 H20.5 V18 H3.5 Z M3.5,13 H20.5 M17.3,15.5 A1,1 0 0 1 19.3,15.5 A1,1 0 0 1 17.3,15.5 Z</Geometry>
+
+    <!-- Motherboard -->
+    <Geometry x:Key="Icon.Board">M5.5,3.5 H18.5 A2,2 0 0 1 20.5,5.5 V18.5 A2,2 0 0 1 18.5,20.5 H5.5 A2,2 0 0 1 3.5,18.5 V5.5 A2,2 0 0 1 5.5,3.5 Z M8.5,8.5 H13 V13 H8.5 Z M15.5,8.5 V11 M15.5,15.5 H17.5 M8,16 H10</Geometry>
+
+    <!-- Firmware / BIOS chip -->
+    <Geometry x:Key="Icon.Firmware">M8,5 H16 A3,3 0 0 1 19,8 V16 A3,3 0 0 1 16,19 H8 A3,3 0 0 1 5,16 V8 A3,3 0 0 1 8,5 Z M12,8.5 V15.5 M9,10.5 L15,13.5 M15,10.5 L9,13.5</Geometry>
+
+    <!-- Operating system window -->
+    <Geometry x:Key="Icon.Os">M3.5,5 H20.5 V19 H3.5 Z M3.5,9.5 H20.5 M6.5,7.25 A0.9,0.9 0 0 1 8.3,7.25 A0.9,0.9 0 0 1 6.5,7.25 Z</Geometry>
+
+    <!-- The machine itself: screen and tower -->
+    <Geometry x:Key="Icon.Computer">M3.5,5.5 H14.5 V13.5 H3.5 Z M6,17.5 H12 M9,13.5 V17.5 M17.5,5.5 H20.5 V18.5 H17.5 Z M18.3,8.6 A0.9,0.9 0 0 1 20.1,8.6 A0.9,0.9 0 0 1 18.3,8.6 Z</Geometry>
+
+    <!-- Bolt: clock speed -->
+    <Geometry x:Key="Icon.Speed">M13.2,3 L6,13.6 H11.4 L10.8,21 L18,10.4 H12.6 Z</Geometry>
+
+    <!-- ========================== Branding ============================== -->
+
+    <!--
+        A generic "picture goes here" frame. It stood in for the BigRat brand
+        mark while the real asset was missing; the brand now shows the actual
+        image, so nothing draws this at the moment. It is kept for the empty
+        state it describes rather than for the logo — a reserved image slot is
+        a thing the app may need again.
+    -->
+    <Geometry x:Key="Icon.Placeholder">M4,5.5 H20 A1.5,1.5 0 0 1 21.5,7 V17 A1.5,1.5 0 0 1 20,18.5 H4 A1.5,1.5 0 0 1 2.5,17 V7 A1.5,1.5 0 0 1 4,5.5 Z M2.5,15.4 L8,11 L12.6,15.1 M12.6,15.1 L16,12 L21.5,16.4 M15.8,8.5 A1.3,1.3 0 0 1 18.4,8.5 A1.3,1.3 0 0 1 15.8,8.5 Z</Geometry>
+
+</ResourceDictionary>
