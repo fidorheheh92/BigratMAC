@@ -88,8 +88,25 @@
     <Geometry x:Key="Icon.ArrowUp">M12,20 V5 M12,5 L7,10 M12,5 L17,10</Geometry>
     <Geometry x:Key="Icon.Trash">M4.5,7 H19.5 M9,7 V4.5 H15 V7 M6.5,7 L7.6,20.5 H16.4 L17.5,7 M10,10.5 V17 M14,10.5 V17</Geometry>
 
-    <!-- Die: the "give me a random address" action -->
-    <Geometry x:Key="Icon.Random">M5.5,4.5 H18.5 A1,1 0 0 1 19.5,5.5 V18.5 A1,1 0 0 1 18.5,19.5 H5.5 A1,1 0 0 1 4.5,18.5 V5.5 A1,1 0 0 1 5.5,4.5 Z M8,8 A1,1 0 0 1 10,8 A1,1 0 0 1 8,8 Z M14,8 A1,1 0 0 1 16,8 A1,1 0 0 1 14,8 Z M8,14 A1,1 0 0 1 10,14 A1,1 0 0 1 8,14 Z M14,14 A1,1 0 0 1 16,14 A1,1 0 0 1 14,14 Z</Geometry>
+    <!-- Die: the "give me a random address" action.
+         Geometry copied from the mockup sprite (16px body, 3.5px corners,
+         four pips), so the dice sits square and centred instead of reading
+         as a lopsided domino. -->
+    <Geometry x:Key="Icon.Random">M7.5,4 H16.5 A3.5,3.5 0 0 1 20,7.5 V16.5 A3.5,3.5 0 0 1 16.5,20 H7.5 A3.5,3.5 0 0 1 4,16.5 V7.5 A3.5,3.5 0 0 1 7.5,4 Z M8,9 A1,1 0 0 1 10,9 A1,1 0 0 1 8,9 Z M14,9 A1,1 0 0 1 16,9 A1,1 0 0 1 14,9 Z M8,15 A1,1 0 0 1 10,15 A1,1 0 0 1 8,15 Z M14,15 A1,1 0 0 1 16,15 A1,1 0 0 1 14,15 Z</Geometry>
+
+    <!-- Two overlapping sheets: copy the address to the clipboard.
+         The mockup's 20/18 bounds and 2px corners, so the two sheets read as
+         one tidy pair rather than an oversized sheet with a sliver behind. -->
+    <Geometry x:Key="Icon.Copy">M9,9 H18 A2,2 0 0 1 20,11 V18 A2,2 0 0 1 18,20 H9 A2,2 0 0 1 7,18 V11 A2,2 0 0 1 9,9 Z M15,9 V6 A2,2 0 0 0 13,4 H6 A2,2 0 0 0 4,6 V13 A2,2 0 0 0 6,15 H7</Geometry>
+
+    <!-- Radio waves and a source dot: the Wi-Fi adapter badge.
+         Concentric arcs on the mockup's exact radii, with the dot centred on
+         the 12px axis — the previous geometry had the dot low and to the
+         left, which is what made the badge look like it had fallen over. -->
+    <Geometry x:Key="Icon.Wifi">M2.5,8.5 A14,14 0 0 1 21.5,8.5 M5.8,12 A9.5,9.5 0 0 1 18.2,12 M9,15.4 A5,5 0 0 1 15,15.4 M11,18.6 A1,1 0 0 1 13,18.6 A1,1 0 0 1 11,18.6 Z</Geometry>
+
+    <!-- Ethernet connector: the wired adapter badge (two prongs, 6px body) -->
+    <Geometry x:Key="Icon.Plug">M9,3 V8 M15,3 V8 M6,8 H18 V11 A6,6 0 0 1 6,11 Z M12,17 V21</Geometry>
 
     <!-- =========================== Status =============================== -->
 

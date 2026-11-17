@@ -1,8 +1,11 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using MacChanger.App.Services;
 using MacChanger.App.Views;
 
@@ -20,7 +23,13 @@ public partial class MainWindow : Window
 {
     readonly AppState state;
     readonly Dictionary<string, UserControl> pages = new();
+    readonly DispatcherTimer toastTimer;
     string currentPage = string.Empty;
+
+    // The dialog is shown over the window rather than opened as a second one.
+    // One request at a time: a page that asks twice while an answer is still
+    // pending gets "no" rather than stacking two dialogs on top of each other.
+    TaskCompletionSource<bool>? confirmCompletion;
 
     public MainWindow(AppState state)
     {
@@ -28,6 +37,12 @@ public partial class MainWindow : Window
 
         this.state = state;
         DataContext = state;
+
+        toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3.4) };
+        toastTimer.Tick += (_, _) => HideToast();
+
+        state.Confirm = ShowConfirmAsync;
+        state.ToastRequested += ShowToast;
 
         // Applied before the window is ever shown, so a rail that was left
         // collapsed last run is already narrow on the first frame rather than
@@ -53,9 +68,189 @@ public partial class MainWindow : Window
 
         Closing += (_, _) =>
         {
+            toastTimer.Stop();
+            FinishConfirm(false);
             state.Connection.Stop();
             state.SaveSettings();
         };
+    }
+
+    // ------------------------------------------------- confirmation dialog
+
+    /// <summary>
+    /// Shows the in-app confirmation and waits for the answer. Wired to
+    /// <see cref="AppState.Confirm"/> so pages never touch the dialog's XAML.
+    /// </summary>
+    async Task<bool> ShowConfirmAsync(ConfirmRequest request)
+    {
+        if (confirmCompletion is not null) return false;
+
+        DialogTitle.Text = request.Title;
+        DialogBody.Text = request.Body;
+        DialogConfirm.Content = request.ConfirmText;
+        DialogConfirm.Style = (Style)FindResource(
+            request.Destructive ? "Button.DangerSolid" : "Button.Primary");
+
+        // The address strip appears only when both ends of the move are known.
+        // A restore whose hardware address the driver will not report has no
+        // "to" address, and an empty right-hand cell would read as a blank.
+        var showsAddresses =
+            !string.IsNullOrWhiteSpace(request.FromAddress) &&
+            !string.IsNullOrWhiteSpace(request.ToAddress);
+        DialogMac.Visibility = showsAddresses ? Visibility.Visible : Visibility.Collapsed;
+        DialogFrom.Text = request.FromAddress ?? string.Empty;
+        DialogTo.Text = request.ToAddress ?? string.Empty;
+
+        var hasNote = !string.IsNullOrWhiteSpace(request.Note);
+        DialogNotePanel.Visibility = hasNote ? Visibility.Visible : Visibility.Collapsed;
+        DialogNote.Text = request.Note ?? string.Empty;
+
+        DialogLayer.Visibility = Visibility.Visible;
+        AnimateDialogIn();
+
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        confirmCompletion = completion;
+
+        // Moving focus in makes Escape, Tab and Space behave, and gives a
+        // keyboard user a way out that is the safe answer rather than the
+        // destructive one.
+        _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => DialogCancel.Focus());
+
+        return await completion.Task;
+    }
+
+    /// <summary>Closes the dialog and answers the waiting page. Safe to call when none is open.</summary>
+    void FinishConfirm(bool result)
+    {
+        var completion = confirmCompletion;
+        if (completion is null) return;
+
+        confirmCompletion = null;
+        DialogLayer.Visibility = Visibility.Collapsed;
+        completion.TrySetResult(result);
+    }
+
+    void DialogConfirmClick(object sender, RoutedEventArgs e) => FinishConfirm(true);
+
+    void DialogCancelClick(object sender, RoutedEventArgs e) => FinishConfirm(false);
+
+    void DialogScrimClick(object sender, MouseButtonEventArgs e) => FinishConfirm(false);
+
+    void DialogKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        e.Handled = true;
+        FinishConfirm(false);
+    }
+
+    /// <summary>
+    /// The mockup's 160ms entrance: a short lift and a barely-there scale, so
+    /// the card arrives rather than blinking on.
+    ///
+    /// Skipped when Windows animations are turned off; the dialog still opens,
+    /// it just opens in place. The values are reset first, because the
+    /// animation from the previous opening is still holding the properties at
+    /// their end state.
+    /// </summary>
+    void AnimateDialogIn()
+    {
+        DialogCard.BeginAnimation(UIElement.OpacityProperty, null);
+        DialogShift.BeginAnimation(TranslateTransform.YProperty, null);
+        DialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        DialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+
+        DialogCard.Opacity = 1;
+        DialogShift.Y = 0;
+        DialogScale.ScaleX = 1;
+        DialogScale.ScaleY = 1;
+
+        if (!SystemParameters.ClientAreaAnimation) return;
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var duration = TimeSpan.FromMilliseconds(160);
+
+        DialogCard.Opacity = 0;
+        DialogCard.BeginAnimation(
+            UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+
+        DialogShift.Y = 6;
+        DialogShift.BeginAnimation(
+            TranslateTransform.YProperty,
+            new DoubleAnimation(6, 0, duration) { EasingFunction = ease });
+
+        DialogScale.ScaleX = 0.99;
+        DialogScale.ScaleY = 0.99;
+        DialogScale.BeginAnimation(
+            ScaleTransform.ScaleXProperty,
+            new DoubleAnimation(0.99, 1, duration) { EasingFunction = ease });
+        DialogScale.BeginAnimation(
+            ScaleTransform.ScaleYProperty,
+            new DoubleAnimation(0.99, 1, duration) { EasingFunction = ease });
+    }
+
+    // -------------------------------------------------------------- toasts
+
+    /// <summary>
+    /// Shows a short outcome at the foot of the window. Wired to
+    /// <see cref="AppState.ToastRequested"/>.
+    /// </summary>
+    void ShowToast(string message, bool isError)
+    {
+        ToastText.Text = message;
+        ToastGlyph.Data = (Geometry)FindResource(isError ? "Icon.Warning" : "Icon.Check");
+        ToastGlyph.Stroke = (Brush)FindResource(isError ? "Brush.Error" : "Brush.Positive");
+
+        toastTimer.Stop();
+
+        ToastHost.BeginAnimation(UIElement.OpacityProperty, null);
+        ToastShift.BeginAnimation(TranslateTransform.YProperty, null);
+
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            ToastHost.Opacity = 1;
+            ToastShift.Y = 0;
+            toastTimer.Start();
+            return;
+        }
+
+        ToastHost.Opacity = 0;
+        ToastHost.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            FillBehavior = FillBehavior.HoldEnd,
+        });
+
+        ToastShift.Y = 8;
+        ToastShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(8, 0, TimeSpan.FromMilliseconds(180))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        });
+
+        toastTimer.Start();
+    }
+
+    void HideToast()
+    {
+        toastTimer.Stop();
+
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            ToastHost.BeginAnimation(UIElement.OpacityProperty, null);
+            ToastHost.Opacity = 0;
+            return;
+        }
+
+        var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(200))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn },
+        };
+        fade.Completed += (_, _) =>
+        {
+            ToastHost.BeginAnimation(UIElement.OpacityProperty, null);
+            ToastHost.Opacity = 0;
+        };
+        ToastHost.BeginAnimation(UIElement.OpacityProperty, fade);
     }
 
     // ------------------------------------------------------------ navigation
@@ -83,20 +278,28 @@ public partial class MainWindow : Window
     /// that moves it — so the width it is leaving is always known, and the
     /// animation never has to guess at a starting point.
     ///
-    /// The nav rows, the brand and the adapter row do not animate: they swap
-    /// their layout on the state change itself, so they have already reflowed
-    /// by the time the rail has moved.
+    /// The nav rows and the collapse row do not animate with the rail: they
+    /// swap their layout on the state change itself, so they have already
+    /// reflowed by the time the rail has moved. The brand lives above the
+    /// navigation and does not move at all.
     /// </summary>
     void RailToggleClick(object sender, RoutedEventArgs e)
     {
         var collapsed = !state.Settings.SidebarCollapsed;
         state.Settings.SidebarCollapsed = collapsed;
 
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            Rail.BeginAnimation(WidthProperty, null);
+            Rail.Width = collapsed ? RailWidthCollapsed : RailWidth;
+            return;
+        }
+
         Rail.BeginAnimation(WidthProperty, new DoubleAnimation
         {
             From = collapsed ? RailWidth : RailWidthCollapsed,
             To = collapsed ? RailWidthCollapsed : RailWidth,
-            Duration = TimeSpan.FromMilliseconds(180),
+            Duration = TimeSpan.FromMilliseconds(160),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
         });
     }
@@ -108,9 +311,6 @@ public partial class MainWindow : Window
         // narrowed type, so the wider type would not compile.
         if (sender is RadioButton { CommandParameter: string page }) NavigateTo(page);
     }
-
-    /// <summary>The rail's adapter row doubles as a shortcut to the MAC Changer page.</summary>
-    void AdapterRowClick(object sender, RoutedEventArgs e) => NavigateTo(AppState.MacChangerPage);
 
     /// <summary>Shows a page, creating it the first time it is needed.</summary>
     void NavigateTo(string page)

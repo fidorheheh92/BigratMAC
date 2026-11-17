@@ -20,7 +20,7 @@ public sealed class SectionIconConverter : IValueConverter
         {
             "System" => "Icon.Computer",
             "System UUID" => "Icon.Shield",
-            "Processor" => "Icon.Speed",
+            "Processor" => "Icon.Hwid",
             "Motherboard" => "Icon.Board",
             "BIOS" => "Icon.Firmware",
             "Memory modules" => "Icon.Memory",

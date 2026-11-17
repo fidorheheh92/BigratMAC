@@ -24,7 +24,10 @@ public sealed class LinkSpeedConverter : IValueConverter
             unit++;
         }
 
-        return $"{rate.ToString("0.#", CultureInfo.InvariantCulture)} {Units[unit]}";
+        var formatted = $"{rate.ToString("0.#", CultureInfo.InvariantCulture)} {Units[unit]}";
+        return parameter is string suffix && suffix.Equals("link", StringComparison.OrdinalIgnoreCase)
+            ? $"{formatted} link"
+            : formatted;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>

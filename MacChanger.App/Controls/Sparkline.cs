@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 
@@ -52,6 +53,28 @@ public sealed class Sparkline : FrameworkElement
             typeof(Sparkline),
             new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    /// <summary>
+    /// Gridlines and axis labels. Null draws neither, for a sparkline used
+    /// without an axis.
+    /// </summary>
+    public static readonly DependencyProperty AxisBrushProperty =
+        DependencyProperty.Register(
+            nameof(AxisBrush),
+            typeof(Brush),
+            typeof(Sparkline),
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    /// <summary>
+    /// The axis labels. Falls back to <see cref="AxisBrush"/> when unset, so a
+    /// chart that wants one colour for both still only needs to set one.
+    /// </summary>
+    public static readonly DependencyProperty LabelBrushProperty =
+        DependencyProperty.Register(
+            nameof(LabelBrush),
+            typeof(Brush),
+            typeof(Sparkline),
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
     public IReadOnlyList<double>? Values
     {
         get => (IReadOnlyList<double>?)GetValue(ValuesProperty);
@@ -70,6 +93,18 @@ public sealed class Sparkline : FrameworkElement
         set => SetValue(SurfaceBrushProperty, value);
     }
 
+    public Brush? AxisBrush
+    {
+        get => (Brush?)GetValue(AxisBrushProperty);
+        set => SetValue(AxisBrushProperty, value);
+    }
+
+    public Brush? LabelBrush
+    {
+        get => (Brush?)GetValue(LabelBrushProperty);
+        set => SetValue(LabelBrushProperty, value);
+    }
+
     static Sparkline() => FocusableProperty.OverrideMetadata(
         typeof(Sparkline), new FrameworkPropertyMetadata(false));
 
@@ -79,16 +114,21 @@ public sealed class Sparkline : FrameworkElement
 
     const double LineWidth = 2;
     const double DotRadius = 4;
-    const double DotRing = 2;
+    const double DotRing = 2.5;
 
-    // The floor the vertical scale will not go below. A connection passing a
-    // few kilobits still gets a scale in megabits, so the line it draws at
-    // the bottom of the plot means "almost nothing" rather than filling the
-    // box and reading as healthy.
-    const double MinScaleMbps = 1.0;
+    // The chart is drawn against a fixed log scale: 0.1 Mbps to 350 Mbps.
+    // The old version scaled to its own peak, so a line's height meant
+    // something different every second and two glances could not be compared.
+    // A log scale keeps a trickle and a saturated link both visible, and the
+    // ceiling is 350 because anything faster is not a reading this card is
+    // meant to characterise — the line flattens at the top instead of
+    // rescaling the whole chart around one burst.
+    const double AxisMinMbps = 0.1;
+    const double AxisMaxMbps = 350;
+    static readonly double AxisDecades = Math.Log10(AxisMaxMbps / AxisMinMbps);
 
-    // Headroom above the tallest sample, so the line does not touch the top.
-    const double Headroom = 1.15;
+    // Space at the right for the decade labels (1000 is the widest).
+    const double LabelGutter = 38;
 
     protected override void OnRender(DrawingContext drawingContext)
     {
@@ -105,37 +145,32 @@ public sealed class Sparkline : FrameworkElement
         if (values is null || values.Count < 2 || stroke is null) return;
         if (width <= 0 || height <= 0) return;
 
-        double top = DotRadius + 1;
-        double bottom = height - DotRadius - 1;
+        double top = 8;
+        double bottom = height - 8;
         double plot = bottom - top;
         if (plot <= 0) return;
 
-        double peak = 0;
-        for (var i = 0; i < values.Count; i++)
-        {
-            var value = values[i];
-            if (double.IsFinite(value) && value > peak) peak = value;
-        }
-
-        double scale = Math.Max(peak * Headroom, MinScaleMbps);
-
         double x0 = Inset;
-        double x1 = Math.Max(Inset + 1, width - Inset);
+        double x1 = Math.Max(Inset + 1, width - LabelGutter);
         double step = (x1 - x0) / (values.Count - 1);
 
-        double Y(int index)
+        // Fixed scale: the same height is always the same speed.
+        double Y(double value)
         {
-            var value = values[index];
             if (!double.IsFinite(value) || value <= 0) return bottom;
-            return bottom - (value / scale) * plot;
+            var clamped = Math.Clamp(value, AxisMinMbps, AxisMaxMbps);
+            var decades = Math.Log10(clamped) - Math.Log10(AxisMinMbps);
+            return bottom - decades / AxisDecades * plot;
         }
+
+        DrawAxis(drawingContext, AxisBrush, LabelBrush, x0, x1, bottom, plot);
 
         var line = new StreamGeometry();
         using (var context = line.Open())
         {
-            context.BeginFigure(new Point(x0, Y(0)), isFilled: false, isClosed: false);
+            context.BeginFigure(new Point(x0, Y(values[0])), isFilled: false, isClosed: false);
             for (var i = 1; i < values.Count; i++)
-                context.LineTo(new Point(x0 + i * step, Y(i)), isStroked: true, isSmoothJoin: false);
+                context.LineTo(new Point(x0 + i * step, Y(values[i])), isStroked: true, isSmoothJoin: false);
         }
         line.Freeze();
 
@@ -144,7 +179,7 @@ public sealed class Sparkline : FrameworkElement
         {
             context.BeginFigure(new Point(x0, bottom), isFilled: true, isClosed: true);
             for (var i = 0; i < values.Count; i++)
-                context.LineTo(new Point(x0 + i * step, Y(i)), isStroked: true, isSmoothJoin: false);
+                context.LineTo(new Point(x0 + i * step, Y(values[i])), isStroked: true, isSmoothJoin: false);
             context.LineTo(new Point(x1, bottom), isStroked: true, isSmoothJoin: false);
         }
         area.Freeze();
@@ -163,7 +198,47 @@ public sealed class Sparkline : FrameworkElement
         var ring = SurfaceBrush;
         var dotPen = ring is null ? null : new Pen(ring, DotRing);
         dotPen?.Freeze();
-        drawingContext.DrawEllipse(stroke, dotPen, new Point(x1, Y(values.Count - 1)), DotRadius, DotRadius);
+        drawingContext.DrawEllipse(stroke, dotPen, new Point(x1, Y(values[values.Count - 1])), DotRadius, DotRadius);
+    }
+
+    /// <summary>
+    /// Draws the decade gridlines and their labels. The lowest decade (0.1) is
+    /// a gridline without a label: it keeps the plot's floor honest without
+    /// adding a figure nobody reads. The ceiling is 350, so the topmost
+    /// labelled line is 100 and the final fifteen percent of the plot is the
+    /// headroom above it.
+    /// </summary>
+    void DrawAxis(DrawingContext drawingContext, Brush? axis, Brush? labels, double x0, double x1, double bottom, double plot)
+    {
+        if (axis is null) return;
+
+        var pen = new Pen(axis, 1);
+        pen.Freeze();
+
+        var labelBrush = labels ?? axis;
+        var typeface = new Typeface("Segoe UI");
+        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+
+        for (var value = AxisMinMbps; value <= AxisMaxMbps + 0.001; value *= 10)
+        {
+            var decades = Math.Log10(value) - Math.Log10(AxisMinMbps);
+            var y = bottom - decades / AxisDecades * plot;
+
+            drawingContext.DrawLine(pen, new Point(x0, y), new Point(x1, y));
+
+            if (value < 1) continue;
+
+            var label = value.ToString("0", CultureInfo.InvariantCulture);
+            var text = new FormattedText(
+                label,
+                CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                typeface,
+                12,
+                labelBrush,
+                pixelsPerDip);
+            drawingContext.DrawText(text, new Point(x1 + 7, y - text.Height / 2));
+        }
     }
 
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)

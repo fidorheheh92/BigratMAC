@@ -97,22 +97,9 @@
                 <Border DockPanel.Dock="Top"
                         Width="34" Height="34" CornerRadius="10"
                         Margin="0,7,0,7"
+                        HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         ToolTip="BigRat">
-                    <!-- Left-aligned on the open rail, centred on the
-                         collapsed one. HorizontalAlignment is set here rather
-                         than as an attribute because a local value outranks a
-                         style trigger, and the trigger would never fire. -->
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="HorizontalAlignment" Value="Left"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
-                                    <Setter Property="HorizontalAlignment" Value="Center"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
                     <Border.Background>
                         <ImageBrush ImageSource="/Assets/bigrat.jpg"
                                     Stretch="UniformToFill"/>
@@ -120,159 +107,62 @@
                 </Border>
 
                 <!--
-                    Collapse / expand the rail, at its very foot.
-
-                    Docked before the adapter row below it: with DockPanel the
-                    first child declared against an edge is the one that gets
-                    the edge, so declaring this one first is what puts the
-                    toggle underneath the adapter row rather than above it.
+                    Collapse / expand the rail, at its very foot: a 32px row
+                    with a 16px chevron, a 12px label and a 10px gap, exactly
+                    as the mockup's `.collapse` row.
 
                     The chevron points the way the rail is about to move. The
                     two directions are separate geometries rather than one
-                    rotated, so they carry the same round caps and joins as the
-                    rest of the icon family.
+                    rotated, so they carry the same round caps and joins as
+                    the rest of the icon family. The label swaps between
+                    "Collapse" and "Expand" with the state, and is dropped on
+                    a narrow rail, where the icon is centred instead.
                 -->
                 <Button DockPanel.Dock="Bottom"
-                        Click="RailToggleClick"
-                        Margin="0,6,0,0">
+                        Click="RailToggleClick">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
-                            <Setter Property="ToolTip" Value="Collapse sidebar"/>
+                        <Style TargetType="Button" BasedOn="{StaticResource Button.Collapse}">
+                            <Setter Property="ToolTip" Value="Collapse navigation"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
-                                    <Setter Property="ToolTip" Value="Expand sidebar"/>
+                                    <Setter Property="ToolTip" Value="Expand navigation"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Button.Style>
-                    <!--
-                        Sized on the Path itself rather than wrapped in a
-                        Viewbox, the way the Settings expander's chevron is.
-
-                        Stretch is the whole point. It defaults to None, and a
-                        Path drawn that way renders at its geometry's raw
-                        coordinates while reporting a desired size measured from
-                        the origin — so a glyph whose coordinates sit away from
-                        the origin lands off centre in whatever box contains it.
-                        These two are drawn at x 5..10 and x 14..19 on the 24
-                        grid, which pushed the chevron about a third of the box
-                        away from centre. Uniform scaling translates the geometry
-                        back to the origin and centres it, so the box and the ink
-                        finally agree.
-                    -->
-                    <Path Width="6" Height="10"
-                          Stretch="Uniform"
-                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}">
-                        <Path.Style>
-                            <Style TargetType="Path" BasedOn="{StaticResource Icon.Path}">
-                                <Setter Property="Data" Value="{StaticResource Icon.ChevronLeft}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
-                                        <Setter Property="Data" Value="{StaticResource Icon.ChevronRight}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Path.Style>
-                    </Path>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Viewbox Width="16" Height="16">
+                            <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}">
+                                <Path.Style>
+                                    <Style TargetType="Path" BasedOn="{StaticResource Icon.Path}">
+                                        <Setter Property="Data" Value="{StaticResource Icon.ChevronLeft}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
+                                                <Setter Property="Data" Value="{StaticResource Icon.ChevronRight}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+                        </Viewbox>
+                        <TextBlock Text="Collapse"
+                                   Margin="10,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontWeight="Medium">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
+                                            <Setter Property="Text" Value="Expand"/>
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
                 </Button>
-
-                <!--
-                    The adapter you are working with, at the foot of the rail.
-
-                    This replaces the old multi-line "SELECTED ADAPTER" block.
-                    It has no card, no label and no border — it is a row on the
-                    rail that happens to be clickable, so it belongs to the
-                    navigation instead of sitting on top of it.
-
-                    Docked before the navigation list below, which is the last
-                    child and therefore fills whatever is left in between.
-
-                    On a collapsed rail the name and the status line are
-                    dropped and the icon takes their place. There is room for
-                    exactly one thing in a 40px row, and the icon is the one
-                    that says what the row leads to; the adapter's name and its
-                    status are both on the page this opens, and the status note
-                    in the title strip still reports a change from anywhere.
-                -->
-                <StackPanel DockPanel.Dock="Bottom">
-                    <Border Style="{StaticResource Divider}" Margin="9,0,9,8"/>
-                    <Button Style="{StaticResource Button.Row}"
-                            Click="AdapterRowClick"
-                            ToolTip="Open the MAC Changer page for this adapter">
-                        <StackPanel>
-                            <Viewbox Width="17" Height="17" HorizontalAlignment="Center">
-                                <Viewbox.Style>
-                                    <Style TargetType="Viewbox">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Viewbox.Style>
-                                <Path Data="{StaticResource Icon.MacChanger}"
-                                      Style="{StaticResource Icon.Path}"
-                                      Stroke="{StaticResource Brush.TextSecondary}"/>
-                            </Viewbox>
-
-                            <TextBlock Text="{Binding SelectedAdapter.Name, FallbackValue=No adapter selected, TargetNullValue=No adapter selected}"
-                                       FontSize="12.5"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource Brush.Text}"
-                                       TextTrimming="CharacterEllipsis">
-                                <!-- Visibility is not set as an attribute: a
-                                     local value would outrank this trigger. -->
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-
-                            <!--
-                                Only rendered when an adapter is actually
-                                selected, so an empty row stays a single line
-                                instead of leaving a stray dot behind — and
-                                never on a collapsed rail, where the icon has
-                                taken the row over.
-
-                                Both conditions live in the style rather than
-                                on the element: Visibility must not also be set
-                                as an attribute, because a local value outranks
-                                a trigger and the trigger would silently do
-                                nothing.
-                            -->
-                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <StackPanel.Style>
-                                    <Style TargetType="StackPanel">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding HasSelection}" Value="True"/>
-                                                    <Condition Binding="{Binding Settings.SidebarCollapsed}" Value="False"/>
-                                                </MultiDataTrigger.Conditions>
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </MultiDataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </StackPanel.Style>
-                                <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                         Fill="{Binding SelectedAdapter.Status, Converter={StaticResource StatusBrush}}"/>
-                                <TextBlock Text="{Binding SelectedAdapter.Status}"
-                                           Margin="7,0,0,0"
-                                           VerticalAlignment="Center"
-                                           FontSize="11"
-                                           Foreground="{StaticResource Brush.TextSecondary}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
 
                 <!--
                     Navigation. Five rows, icon first, no section headings —
@@ -283,7 +173,7 @@
                     markup would fire Checked while the page host further down
                     this file has not been created yet.
                 -->
-                <StackPanel x:Name="NavList" VerticalAlignment="Top" Margin="0,12,0,0">
+                <StackPanel x:Name="NavList" VerticalAlignment="Top" Margin="0,6,0,0">
                     <RadioButton x:Name="NavDashboard"
                                  Style="{StaticResource NavItem}" GroupName="Nav"
                                  Content="Dashboard"
@@ -343,43 +233,22 @@
             </Grid.RowDefinitions>
 
             <!--
-                The title area carries the window controls and, when there is
-                genuinely something to report, a transient note.
-
-                There is no permanent status bar anywhere in BigRat. An idle
-                window shows an empty strip: no "Ready — N adapter(s)
-                detected.", because the adapter list on the page already says
-                that and saying it twice is noise. The note below appears only
-                while a scan or a write is running, or when something failed.
+                The title area carries the window controls. There is no
+                permanent status bar anywhere in BigRat, and no transient one
+                here either: an outcome belongs on the page that produced it,
+                directly under the action, where it cannot be mistaken for
+                something another page did. Anything short enough to be a
+                passing remark is a toast at the foot of the window.
 
                 The strip needs no background of its own: the whole content
                 column is already Brush.Sidebar, so the strip and the rail read
-                as one band across the top of the window. That surface is one
-                step above the page canvas, which is the whole point of the
-                surface ramp in Palette.xaml.
+                as one band across the top of the window.
             -->
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
-                <Grid Margin="26,0,16,0" VerticalAlignment="Center"
-                      Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVisible}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                             Fill="{DynamicResource Brush.Accent}"/>
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding StatusMessage}"
-                               Margin="9,0,0,0"
-                               VerticalAlignment="Center"
-                               FontSize="12"
-                               Foreground="{StaticResource Brush.TextSecondary}"
-                               TextTrimming="CharacterEllipsis"/>
-                </Grid>
 
                 <!--
                     Three coloured dots, in the order a Windows user's hand
@@ -398,7 +267,7 @@
                     swallowed by the drag handler.
                 -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal"
-                            VerticalAlignment="Center" Margin="0,0,10,0">
+                            VerticalAlignment="Center" Margin="0,0,6,0">
 
                     <Button Style="{StaticResource WindowButton.Minimize}"
                             Click="MinimizeClick"
@@ -460,6 +329,217 @@
                     Background="{StaticResource Brush.Canvas}"
                     CornerRadius="{StaticResource Radius.Content}">
                 <ContentControl x:Name="PageHost"/>
+            </Border>
+        </Grid>
+
+        <!--
+            ======================== Confirmation dialog =======================
+
+            One dialog for the whole application, drawn on the same surface
+            ramp as everything else and shown over a scrim. It replaces the
+            operating system's MessageBox, which brought its own type, its own
+            button order and its own idea of what a dark application looks
+            like.
+
+            The page asks for it through AppState.Confirm and awaits a bool, so
+            no page needs to know how it is drawn. From and To are shown side
+            by side when the action moves an address; a dialog with nothing to
+            move (clearing the history) simply leaves that strip out.
+
+            Keyboard: Escape cancels. Enter is deliberately not wired to the
+            confirming button — a confirmation is the one place in the
+            application where an accidental keypress is worth less than an
+            extra click.
+        -->
+        <Grid x:Name="DialogLayer" Grid.ColumnSpan="2" Visibility="Collapsed">
+            <Border Background="{StaticResource Brush.Scrim}"
+                    MouseLeftButtonDown="DialogScrimClick"/>
+
+            <Border x:Name="DialogCard"
+                    Width="462"
+                    MaxWidth="462"
+                    Background="{StaticResource Brush.Card}"
+                    CornerRadius="{StaticResource Radius.Card}"
+                    Padding="22"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    KeyboardNavigation.TabNavigation="Cycle"
+                    PreviewKeyDown="DialogKeyDown"
+                    SnapsToDevicePixels="True"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="DialogScale" ScaleX="1" ScaleY="1"/>
+                        <TranslateTransform x:Name="DialogShift" Y="0"/>
+                    </TransformGroup>
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="70" ShadowDepth="28"
+                                      Direction="270" Opacity="0.55"
+                                      Color="#000000"/>
+                </Border.Effect>
+
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="34" Height="34"
+                                CornerRadius="10"
+                                Background="{StaticResource Brush.Elevated}"
+                                VerticalAlignment="Top">
+                            <Viewbox Width="16" Height="16"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Path Data="{StaticResource Icon.MacChanger}"
+                                      Style="{StaticResource Icon.Path}"
+                                      Stroke="{StaticResource Brush.TextSecondary}"/>
+                            </Viewbox>
+                        </Border>
+
+                        <TextBlock x:Name="DialogTitle"
+                                   Grid.Column="1"
+                                   Margin="12,6,0,0"
+                                   FontSize="15.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource Brush.Text}"
+                                   TextWrapping="Wrap"
+                                   TextOptions.TextFormattingMode="Ideal"/>
+                    </Grid>
+
+                    <TextBlock x:Name="DialogBody"
+                               Style="{StaticResource Text.Secondary}"
+                               FontSize="13"
+                               LineHeight="19"
+                               Margin="0,14,0,0"/>
+
+                    <!-- Old → new, only when the request carries an address
+                         move. Recessed rather than on the card so the two
+                         addresses read as one object. -->
+                    <Border x:Name="DialogMac"
+                            Style="{StaticResource Card.Well}"
+                            CornerRadius="12"
+                            Padding="13,14"
+                            Margin="0,14,0,0"
+                            Visibility="Collapsed">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock x:Name="DialogFrom"
+                                       Style="{StaticResource Text.MonoSecondary}"
+                                       Foreground="{StaticResource Brush.TextTertiary}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis">
+                                <TextBlock.TextDecorations>
+                                    <TextDecoration Location="Strikethrough"/>
+                                </TextBlock.TextDecorations>
+                            </TextBlock>
+
+                            <Viewbox Grid.Column="1" Width="16" Height="16" Margin="12,0">
+                                <Path Data="{StaticResource Icon.ArrowRight}"
+                                      Style="{StaticResource Icon.Path}"
+                                      Stroke="{StaticResource Brush.TextTertiary}"/>
+                            </Viewbox>
+
+                            <TextBlock x:Name="DialogTo"
+                                       Grid.Column="2"
+                                       Style="{StaticResource Text.MonoAccent}"
+                                       FontSize="14"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                    </Border>
+
+                    <Grid x:Name="DialogNotePanel"
+                          Margin="0,12,0,0"
+                          Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Viewbox Width="15" Height="15"
+                                 VerticalAlignment="Top" Margin="0,1,0,0">
+                            <Path Data="{StaticResource Icon.Info}"
+                                  Style="{StaticResource Icon.Path}"
+                                  Stroke="{StaticResource Brush.TextTertiary}"/>
+                        </Viewbox>
+                        <TextBlock x:Name="DialogNote"
+                                   Grid.Column="1"
+                                   Style="{StaticResource Text.Secondary}"
+                                   Margin="8,0,0,0"
+                                   FontSize="12.5"
+                                   LineHeight="18"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="0,20,0,0">
+                        <Button x:Name="DialogCancel"
+                                Style="{StaticResource Button.Secondary}"
+                                Content="Cancel"
+                                Margin="0,0,10,0"
+                                Click="DialogCancelClick"/>
+                        <Button x:Name="DialogConfirm"
+                                Style="{StaticResource Button.Primary}"
+                                Click="DialogConfirmClick"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!--
+            ============================== Toasts ==============================
+
+            A transient remark at the foot of the window, for outcomes too
+            short for a card: copied to the clipboard, scan finished, history
+            cleared. Never used to announce something that is still running or
+            something that did not happen.
+
+            Hit testing is off: a toast must never sit between the pointer and
+            the control underneath it. It is drawn after the dialog so it stays
+            visible if a toast arrives while one is open.
+        -->
+        <Grid x:Name="ToastHost"
+              Grid.ColumnSpan="2"
+              VerticalAlignment="Bottom"
+              HorizontalAlignment="Center"
+              Margin="0,0,0,24"
+              IsHitTestVisible="False"
+              Opacity="0">
+            <Border Background="{StaticResource Brush.Elevated}"
+                    CornerRadius="12"
+                    Padding="15,11"
+                    SnapsToDevicePixels="True">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="32" ShadowDepth="12"
+                                      Direction="270" Opacity="0.45"
+                                      Color="#000000"/>
+                </Border.Effect>
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="ToastShift" Y="0"/>
+                </Border.RenderTransform>
+
+                <StackPanel Orientation="Horizontal">
+                    <Viewbox Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,9,0">
+                        <Path x:Name="ToastGlyph"
+                              Style="{StaticResource Icon.Path}"
+                              Data="{StaticResource Icon.Check}"
+                              Stroke="{StaticResource Brush.Positive}"/>
+                    </Viewbox>
+                    <TextBlock x:Name="ToastText"
+                               Style="{StaticResource Text.Body}"
+                               FontSize="13"
+                               LineHeight="18"
+                               MaxWidth="620"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>

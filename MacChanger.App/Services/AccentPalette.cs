@@ -29,11 +29,21 @@ public static class AccentPalette
         new AccentOption("Lime",   Color.FromRgb(0xC1, 0xFF, 0x72)),
         new AccentOption("Cyan",   Color.FromRgb(0x5F, 0xD3, 0xE8)),
         new AccentOption("Violet", Color.FromRgb(0xB0, 0x8C, 0xFF)),
-        new AccentOption("Amber",  Color.FromRgb(0xFF, 0xC2, 0x4B)),
+        // Rose replaces Amber. #FFC24B sat almost on top of the warning colour
+        // (#F5A524), so a primary button and a warning chip were one glance
+        // apart — the wrong thing to be ambiguous about in a tool that writes
+        // to hardware. Rose is far enough from both the warning and the error.
+        new AccentOption("Rose",   Color.FromRgb(0xFF, 0x8F, 0xB0)),
     };
 
     public static AccentOption Find(string? name) =>
-        Options.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase)) ?? Options[0];
+        Options.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase))
+        // A settings file written before the swap still says "Amber". Honour
+        // the choice by its nearest surviving neighbour rather than silently
+        // resetting the user to Lime.
+        ?? (string.Equals(name, "Amber", StringComparison.OrdinalIgnoreCase)
+            ? Options.FirstOrDefault(o => o.Name == "Rose")!
+            : Options[0]);
 
     /// <summary>
     /// Applies an accent by name. Unknown names fall back to the default.

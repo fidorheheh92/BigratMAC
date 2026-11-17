@@ -8,20 +8,20 @@
 
         A timeline rather than a table. Each entry is one operation: when it
         ran, which adapter, what moved to what, and how it ended. The result
-        colour is carried by a small dot on the left and by the outcome word on
-        the right — no coloured rows, no badges shouting at you.
+        colour is carried by a small dot and by a chip on the entry — no
+        coloured rows, no badges shouting at you.
 
         The record is written to a file under %APPDATA% as each operation
         finishes, so this page shows what earlier runs did as well as what this
-        one has. Two quiet lines under the header name the two states worth
-        saying out loud: recording turned off, and a record that could not be
-        written to disk.
+        one has. The notes under the header name the states worth saying out
+        loud: recording turned off, a record that could not be written, and a
+        clear whose file deletion failed.
     -->
     <ScrollViewer Style="{StaticResource ScrollViewer.Page}">
-        <StackPanel Margin="{StaticResource Pad.Page}" MaxWidth="780">
+        <StackPanel Margin="{StaticResource Pad.Page}" MaxWidth="740">
 
             <!-- ============================== Header ============================== -->
-            <Grid Margin="0,0,0,22">
+            <Grid Margin="0,0,0,20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -29,7 +29,7 @@
                 <StackPanel>
                     <TextBlock Text="History" Style="{StaticResource Text.PageTitle}"/>
                     <TextBlock Style="{StaticResource Text.PageSubtitle}"
-                               Text="Every MAC operation BigRat has performed, newest first. Kept on this machine beside your preferences — turning that off, and clearing what is already here, are both in your hands."/>
+                               Text="Every write BigRat has made on this machine, and whether the adapter accepted it."/>
                 </StackPanel>
                 <!--
                     The one destructive control in BigRat, so it gets the one
@@ -41,7 +41,7 @@
                         Click="ClearClick"
                         IsEnabled="{Binding HasHistory}">
                     <StackPanel Orientation="Horizontal">
-                        <Viewbox Width="15" Height="15" Margin="0,0,8,0">
+                        <Viewbox Width="16" Height="16" Margin="0,0,8,0">
                             <Path Data="{StaticResource Icon.Trash}"
                                   Style="{StaticResource Icon.Path}"
                                   Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
@@ -54,9 +54,7 @@
             <!--
                 Recording off: one sentence rather than a chip or a warning
                 colour. Nothing has gone wrong — the user asked for this — and
-                the page only has to say why it is not growing. Visible while
-                the preference is false, which is exactly the swap BoolToHidden
-                exists for.
+                the page only has to say why it is not growing.
             -->
             <TextBlock Style="{StaticResource Text.Secondary}"
                        Margin="0,0,0,18"
@@ -71,128 +69,195 @@
                        Visibility="{Binding HistoryStorageFailed, Converter={StaticResource BoolToVisible}}"
                        Text="The record could not be written to disk, so this session will not be kept. The file BigRat tried to use is named on the Settings page."/>
 
-            <!-- ============================ Empty state =========================== -->
-            <!--
-                First run has no history at all, so this is a real screen rather
-                than an error. It reads like a designed state: a mark, one
-                sentence, and a way to go and create the first entry.
-            -->
-            <Border Style="{StaticResource Card}"
-                    Padding="24,44"
-                    Visibility="{Binding HasNoHistory, Converter={StaticResource BoolToVisible}}">
-                <StackPanel HorizontalAlignment="Center">
-                    <Border Width="54" Height="54" CornerRadius="16"
-                            Background="{StaticResource Brush.Elevated}"
-                            HorizontalAlignment="Center">
-                        <Viewbox Width="24" Height="24"
-                                 HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Path Data="{StaticResource Icon.History}"
-                                  Style="{StaticResource Icon.Path}"
-                                  Stroke="{StaticResource Brush.TextTertiary}"/>
-                        </Viewbox>
-                    </Border>
-
-                    <TextBlock Style="{StaticResource Text.CardTitle}"
-                               FontSize="15"
-                               HorizontalAlignment="Center"
-                               Margin="0,18,0,0"
-                               Text="Nothing has been recorded yet"/>
-
-                    <TextBlock Style="{StaticResource Text.Secondary}"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               MaxWidth="400"
-                               Margin="0,8,0,0"
-                               Text="Change or restore a MAC address and the operation will appear here with its result — the failures too, as long as recording is on."/>
-
-                    <Button Style="{StaticResource Button.Secondary}"
-                            HorizontalAlignment="Center"
-                            Margin="0,18,0,0"
-                            Tag="MAC Changer"
-                            Click="NavigateClick">
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="16" Height="16" Margin="0,0,9,0">
-                                <Path Data="{StaticResource Icon.MacChanger}"
-                                      Style="{StaticResource Icon.Path}"
-                                      Stroke="{StaticResource Brush.Text}"/>
-                            </Viewbox>
-                            <TextBlock Text="Go to MAC Changer" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+            <!-- A clear that emptied the list but could not delete the file is
+                 not a clean sweep. It stays on screen until the next clear
+                 rather than being a toast that disappears. -->
+            <Border x:Name="ClearWarning"
+                    Style="{StaticResource ResultBanner.Warn}"
+                    Margin="0,0,0,18"
+                    Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal">
+                    <Viewbox Width="16" Height="16" Margin="0,1,9,0" VerticalAlignment="Top">
+                        <Path Data="{StaticResource Icon.Warning}"
+                              Style="{StaticResource Icon.Path}"
+                              Stroke="{StaticResource Brush.Warning}"/>
+                    </Viewbox>
+                    <TextBlock x:Name="ClearWarningText"
+                               Style="{StaticResource Text.Secondary}"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
-            <!-- ============================== Timeline ============================ -->
-            <Border Style="{StaticResource Card}"
-                    Padding="24,20,24,10"
-                    Visibility="{Binding HasHistory, Converter={StaticResource BoolToVisible}}">
-                <ItemsControl ItemsSource="{Binding History.Entries}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="0,0,0,18">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+            <!-- =============================== Record ============================= -->
+            <!--
+                One surface for both the timeline and its empty state, as in the
+                mockup: the card does not change shape when the first entry is
+                written.
+            -->
+            <Border Style="{StaticResource Card}" Padding="20,18">
+                <Grid>
+                    <!-- ========================= Empty state ========================= -->
+                    <StackPanel Margin="0,10,0,22"
+                                HorizontalAlignment="Center"
+                                Visibility="{Binding HasNoHistory, Converter={StaticResource BoolToVisible}}">
+                        <Border Width="46" Height="46" CornerRadius="13"
+                                Background="{StaticResource Brush.Elevated}"
+                                HorizontalAlignment="Center">
+                            <Viewbox Width="22" Height="22"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Path Data="{StaticResource Icon.History}"
+                                      Style="{StaticResource Icon.Path}"
+                                      Stroke="{StaticResource Brush.TextSecondary}"/>
+                            </Viewbox>
+                        </Border>
 
-                                <!-- Result dot: success and failure use the same
-                                     green/red as every other status in the app. -->
-                                <Ellipse Width="7" Height="7"
-                                         Margin="0,6,14,0"
-                                         VerticalAlignment="Top"
-                                         Fill="{Binding Outcome, Converter={StaticResource StatusBrush}}"/>
+                        <TextBlock Style="{StaticResource Text.CardTitle}"
+                                   FontSize="13.5"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,13,0,0"
+                                   Text="Nothing recorded yet"/>
 
-                                <!-- Wide enough for the dated form, which is
-                                     the one that has to fit: the column is a
-                                     fixed width so the timestamps stay in a
-                                     line down the page. -->
-                                <TextBlock Grid.Column="1"
-                                           Style="{StaticResource Text.Secondary}"
-                                           FontSize="12"
-                                           Width="112"
-                                           Margin="0,0,18,0"
-                                           Text="{Binding Time}"/>
+                        <TextBlock Style="{StaticResource Text.Secondary}"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   MaxWidth="240"
+                                   Margin="0,4,0,0"
+                                   Text="BigRat records each write here so you can see what changed, when, and whether the adapter confirmed it."/>
 
-                                <StackPanel Grid.Column="2" Margin="0,0,16,0">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Action}"
-                                                   Style="{StaticResource Text.BodyStrong}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="  ·  " Style="{StaticResource Text.Secondary}"/>
-                                        <TextBlock Text="{Binding AdapterName}"
-                                                   Style="{StaticResource Text.Secondary}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
+                        <Button Style="{StaticResource Button.Secondary}"
+                                HorizontalAlignment="Center"
+                                Margin="0,14,0,0"
+                                Tag="MAC Changer"
+                                Click="NavigateClick"
+                                Content="Go to MAC Changer"/>
+                    </StackPanel>
 
-                                    <TextBlock Text="{Binding Change}"
-                                               Style="{StaticResource Text.MonoSecondary}"
-                                               FontSize="12"
-                                               Margin="0,6,0,0"/>
+                    <!-- ========================== Timeline ========================== -->
+                    <ItemsControl ItemsSource="{Binding History.Entries}"
+                                  AlternationCount="1000"
+                                  Visibility="{Binding HasHistory, Converter={StaticResource BoolToVisible}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!--
+                                    The mockup's three columns: a 14px rail, a
+                                    112px time column, then the entry. The rail
+                                    and content carry 12px margins, which is the
+                                    grid gap without needing column spacing.
+                                -->
+                                <Grid>
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Margin" Value="0,0,0,18"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource ItemPosition}" ConverterParameter="last">
+                                                            <Binding Path="(ItemsControl.AlternationIndex)"
+                                                                     RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
+                                                            <Binding Path="Items.Count"
+                                                                     RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Margin" Value="0"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
 
-                                    <TextBlock Text="{Binding Message}"
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="14"/>
+                                        <ColumnDefinition Width="124"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!--
+                                        The connector is drawn from this dot
+                                        down to the next one, and stops after
+                                        the last entry. It is part of the row
+                                        rather than a global line, so it stays
+                                        with its entry when the list scrolls.
+                                    -->
+                                    <Grid Grid.Column="0">
+                                        <Border Width="1"
+                                                Background="{StaticResource Brush.Divider}"
+                                                HorizontalAlignment="Center"
+                                                Margin="0,14,0,-18">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="True">
+                                                            <DataTrigger.Binding>
+                                                                <MultiBinding Converter="{StaticResource ItemPosition}" ConverterParameter="last">
+                                                                    <Binding Path="(ItemsControl.AlternationIndex)"
+                                                                             RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
+                                                                    <Binding Path="Items.Count"
+                                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                                </MultiBinding>
+                                                            </DataTrigger.Binding>
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+
+                                        <Ellipse Width="7" Height="7"
+                                                 Margin="0,6,0,0"
+                                                 VerticalAlignment="Top"
+                                                 HorizontalAlignment="Center"
+                                                 Panel.ZIndex="1"
+                                                 Fill="{Binding OutcomeTone, Converter={StaticResource StatusBrush}}"/>
+                                    </Grid>
+
+                                    <TextBlock Grid.Column="1"
                                                Style="{StaticResource Text.Secondary}"
-                                               FontSize="11"
-                                               Margin="0,6,0,0"
-                                               Visibility="{Binding Message, Converter={StaticResource TextToVisible}}"/>
-                                </StackPanel>
+                                               Foreground="{StaticResource Brush.TextTertiary}"
+                                               FontSize="12"
+                                               Margin="12,2,0,0"
+                                               VerticalAlignment="Top"
+                                               Text="{Binding TimelineTime}"/>
 
-                                <!-- Coloured chip rather than bare coloured text,
-                                     so the outcome stays legible at a glance. -->
-                                <Border Grid.Column="3"
-                                        Style="{StaticResource Chip.Small}"
-                                        VerticalAlignment="Top"
-                                        Background="{Binding Outcome, Converter={StaticResource StatusSoftBrush}}">
-                                    <TextBlock Text="{Binding Outcome}"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               Foreground="{Binding Outcome, Converter={StaticResource StatusBrush}}"/>
-                                </Border>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                                    <StackPanel Grid.Column="2" Margin="12,0,0,0">
+                                        <TextBlock Text="{Binding TimelineTitle}"
+                                                   Style="{StaticResource Text.Body}"
+                                                   FontSize="13.5"
+                                                   FontWeight="Medium"/>
+
+                                        <TextBlock Text="{Binding TimelineMac}"
+                                                   Style="{StaticResource Text.MonoSecondary}"
+                                                   FontSize="12.5"
+                                                   Margin="0,3,0,0"
+                                                   TextWrapping="Wrap"/>
+
+                                        <TextBlock Text="{Binding TimelineNote}"
+                                                   Style="{StaticResource Text.Secondary}"
+                                                   FontSize="12.5"
+                                                   Margin="0,4,0,0"
+                                                   Visibility="{Binding TimelineNote, Converter={StaticResource TextToVisible}}"/>
+
+                                        <Border Style="{StaticResource Chip}"
+                                                HorizontalAlignment="Left"
+                                                Height="26"
+                                                Padding="10,0"
+                                                Margin="0,8,0,0"
+                                                Background="{Binding OutcomeTone, Converter={StaticResource StatusSoftBrush}}">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                         Fill="{Binding OutcomeTone, Converter={StaticResource StatusBrush}}"/>
+                                                <TextBlock Text="{Binding OutcomeLabel}"
+                                                           Margin="6,0,0,0"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{Binding OutcomeTone, Converter={StaticResource StatusBrush}}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
             </Border>
 
         </StackPanel>

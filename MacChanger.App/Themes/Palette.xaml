@@ -49,6 +49,33 @@
     <!-- Separators. Deliberately faint: one step above the surface they sit on. -->
     <SolidColorBrush x:Key="Brush.Divider"        Color="#24272C"/>
 
+    <!-- The sparkline's gridlines. A touch above the divider so a chart reads
+         as a measured object, still quiet enough not to compete with the line. -->
+    <SolidColorBrush x:Key="Brush.ChartGrid"      Color="#2E3238"/>
+
+    <!-- The one edge strong enough to read as an edge: input outlines and the
+         scrollbar thumb. #5A6068 is 3.00:1 against the well and 3.04:1 against
+         the canvas, so both clear WCAG 1.4.11; Brush.Divider does not. -->
+    <SolidColorBrush x:Key="Brush.BorderStrong"   Color="#5A6068"/>
+
+    <!-- Behind a modal dialog. Solid rather than an opacity effect so the
+         dialog does not inherit the window's composition cost. -->
+    <SolidColorBrush x:Key="Brush.Scrim"          Color="#A9060709"/>
+
+    <!-- Pure black, used only as a translucent press veil. Never a surface:
+         it exists so a pressed control can step *down* in brightness the way
+         the mockup's `filter: brightness(.78)` does, on lime and on the
+         window dots alike. -->
+    <SolidColorBrush x:Key="Brush.Shade"          Color="#000000"/>
+
+    <!-- The Settings save bar's fade: solid canvas at the bottom, thinning to
+         transparent at the top so the content scrolls under it. -->
+    <LinearGradientBrush x:Key="Brush.SaveBarFade" StartPoint="0.5,1" EndPoint="0.5,0">
+        <GradientStop Color="#0D0E11" Offset="0"/>
+        <GradientStop Color="#0D0E11" Offset="0.62"/>
+        <GradientStop Color="#000D0E11" Offset="1"/>
+    </LinearGradientBrush>
+
     <!-- ========================= Accent =============================== -->
 
     <SolidColorBrush x:Key="Brush.Accent"         Color="#C1FF72"/>
@@ -63,7 +90,9 @@
 
     <SolidColorBrush x:Key="Brush.Text"           Color="#F2F3F5"/>
     <SolidColorBrush x:Key="Brush.TextSecondary"  Color="#9AA0A9"/>
-    <SolidColorBrush x:Key="Brush.TextTertiary"   Color="#686E78"/>
+    <!-- #7D848E, not #686E78: 4.57:1 on a card, so section labels, timestamps
+         and placeholders clear AA. The old value measured 3.40:1. -->
+    <SolidColorBrush x:Key="Brush.TextTertiary"   Color="#7D848E"/>
     <SolidColorBrush x:Key="Brush.TextDisabled"   Color="#4A4F57"/>
 
     <!-- Text drawn on top of the lime accent -->
@@ -74,6 +103,13 @@
     <SolidColorBrush x:Key="Brush.Positive"       Color="#C1FF72"/>
     <SolidColorBrush x:Key="Brush.Warning"        Color="#F5A524"/>
     <SolidColorBrush x:Key="Brush.Error"          Color="#F2555A"/>
+
+    <!-- A destructive action that has already been confirmed and is the one
+         thing to press in a dialog. #B83238 is dark enough to carry white text
+         at 5.9:1; Brush.Error would not be. -->
+    <SolidColorBrush x:Key="Brush.DangerSolid"    Color="#B83238"/>
+    <SolidColorBrush x:Key="Brush.TextOnDanger"   Color="#FFFFFF"/>
+
     <SolidColorBrush x:Key="Brush.Info"           Color="#6BA8FF"/>
     <SolidColorBrush x:Key="Brush.Neutral"        Color="#8B909A"/>
 
@@ -111,7 +147,7 @@
 
     <!-- ========================== Metrics ============================= -->
 
-    <CornerRadius x:Key="Radius.Card">22</CornerRadius>
+    <CornerRadius x:Key="Radius.Card">20</CornerRadius>
     <CornerRadius x:Key="Radius.Control">14</CornerRadius>
     <CornerRadius x:Key="Radius.Chip">10</CornerRadius>
     <CornerRadius x:Key="Radius.Small">8</CornerRadius>
@@ -130,9 +166,8 @@
         The page surface in MainWindow.xaml. Only the top-left corner is
         rounded: that is the corner that tucks under the rail and the title
         strip, while the rest are the window's own edges and are squared off by
-        the shell. Held at the same value as Radius.Card so the content sheet
-        and the cards on it speak the same corner language — a CornerRadius
-        resource cannot reference another, so the two are kept in step by hand.
+        the shell. 22 is the mockup's content-sheet radius; cards use 20, so
+        the sheet reads as the larger surface it is.
     -->
     <CornerRadius x:Key="Radius.Content">22,0,0,0</CornerRadius>
 
@@ -143,7 +178,8 @@
     -->
     <Thickness x:Key="Pad.Card">20</Thickness>
     <Thickness x:Key="Pad.CardTight">16</Thickness>
-    <Thickness x:Key="Pad.Page">26,22,26,26</Thickness>
+    <!-- CSS padding:24px 26px 36px — top, sides, bottom. -->
+    <Thickness x:Key="Pad.Page">26,24,26,36</Thickness>
 
     <!-- ======================== Text styles =========================== -->
 
@@ -161,15 +197,17 @@
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
-        <Setter Property="LineHeight" Value="20"/>
+        <Setter Property="LineHeight" Value="19"/>
         <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
-        <Setter Property="Margin" Value="0,7,0,0"/>
+        <Setter Property="Margin" Value="0,6,0,0"/>
     </Style>
 
-    <!-- Small quiet label that sits above a block of content -->
+    <!-- Small quiet label that sits above a block of content. 12px is the
+         floor for every piece of text in the app; 11px section labels were the
+         one place that broke it. -->
     <Style x:Key="Text.SectionLabel" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
-        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontSize" Value="12"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
     </Style>
@@ -183,7 +221,7 @@
 
     <Style x:Key="Text.Body" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="13.5"/>
         <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="LineHeight" Value="20"/>
@@ -196,7 +234,7 @@
 
     <Style x:Key="Text.Secondary" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="12.5"/>
         <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="LineHeight" Value="18"/>
@@ -216,6 +254,7 @@
     -->
     <Style x:Key="Text.MonoAccent" TargetType="TextBlock" BasedOn="{StaticResource Text.Mono}">
         <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}"/>
     </Style>
 
@@ -235,7 +274,7 @@
     -->
     <Style x:Key="Text.Metric" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
-        <Setter Property="FontSize" Value="34"/>
+        <Setter Property="FontSize" Value="36"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
         <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>

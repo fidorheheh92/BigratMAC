@@ -1,6 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using MacChanger.App.Services;
 using MacChanger.Core;
 
@@ -13,18 +16,120 @@ namespace MacChanger.App.Views;
 /// </summary>
 public partial class MacChangerView : UserControl
 {
-    const string DefaultHint = "12 hexadecimal digits, for example 02:11:22:33:44:55.";
+    const string DefaultHint = "Any 12 hex digits. BigRat writes them as AA:BB:CC:DD:EE:FF.";
+
+    enum ResultTone { Ok, Warn, Bad }
 
     readonly AppState state;
+
+    bool skeletonPulsing;
 
     public MacChangerView(AppState state)
     {
         InitializeComponent();
         this.state = state;
         DataContext = state;
+
+        state.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(AppState.CanAct) or nameof(AppState.HasSelection))
+                UpdateApplyState();
+            else if (e.PropertyName == nameof(AppState.IsScanningAdapters))
+                UpdateSkeletonPulse();
+        };
+
+        UpdateApplyState();
+        UpdateSkeletonPulse();
     }
 
-    async void RefreshClick(object sender, RoutedEventArgs e) => await state.RefreshAdaptersAsync();
+    // ---------------------------------------------------------- page state
+
+    /// <summary>
+    /// The primary button is enabled only when there is an adapter to write to,
+    /// nothing else is running, and the text in the box is a real address.
+    /// </summary>
+    void UpdateApplyState() =>
+        ApplyButton.IsEnabled = state.CanAct && MacAddress.TryParse(NewMacBox.Text, out _);
+
+    void NewMacTextChanged(object sender, TextChangedEventArgs e) => UpdateApplyState();
+
+    /// <summary>
+    /// The mockup's 1.5s skeleton pulse. It runs only while a scan is actually
+    /// happening, and holds still when Windows has reduced motion enabled.
+    /// </summary>
+    void UpdateSkeletonPulse()
+    {
+        Border[] parts =
+        {
+            AdapterSkeletonSquare1, AdapterSkeletonBar1, AdapterSkeletonBar2,
+            AdapterSkeletonSquare2, AdapterSkeletonBar3, AdapterSkeletonBar4,
+        };
+
+        if (state.IsScanningAdapters)
+        {
+            if (skeletonPulsing) return;
+            skeletonPulsing = true;
+
+            if (!SystemParameters.ClientAreaAnimation)
+            {
+                foreach (var part in parts) part.Opacity = 0.7;
+                return;
+            }
+
+            var pulse = new DoubleAnimationUsingKeyFrames
+            {
+                Duration = TimeSpan.FromSeconds(1.5),
+                RepeatBehavior = RepeatBehavior.Forever,
+            };
+            pulse.KeyFrames.Add(new LinearDoubleKeyFrame(0.55, KeyTime.FromPercent(0)));
+            pulse.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromPercent(0.5)));
+            pulse.KeyFrames.Add(new LinearDoubleKeyFrame(0.55, KeyTime.FromPercent(1)));
+
+            foreach (var part in parts) part.BeginAnimation(UIElement.OpacityProperty, pulse);
+            return;
+        }
+
+        if (!skeletonPulsing) return;
+        skeletonPulsing = false;
+
+        foreach (var part in parts)
+        {
+            part.BeginAnimation(UIElement.OpacityProperty, null);
+            part.Opacity = 1;
+        }
+    }
+
+    /// <summary>Enter in the address field submits, but only when the button would be enabled.</summary>
+    void NewMacKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || !ApplyButton.IsEnabled) return;
+        e.Handled = true;
+        ApplyClick(ApplyButton, new RoutedEventArgs());
+    }
+
+    void SettingsLinkClick(object sender, RoutedEventArgs e) =>
+        state.Navigate?.Invoke(AppState.SettingsPage);
+
+    // ------------------------------------------------------------- actions
+
+    async void RefreshClick(object sender, RoutedEventArgs e)
+    {
+        await state.RefreshAdaptersAsync();
+
+        // A scan that threw is not a scan that found nothing. The shell has
+        // already shown the exception; the picker's own state explains it.
+        if (state.ScanFailed) return;
+
+        if (state.HasNoAdapters)
+        {
+            state.ShowToast("No supported network adapters were found.", true);
+            return;
+        }
+
+        state.ShowToast(state.Adapters.Count == 1
+            ? "1 adapter found."
+            : $"{state.Adapters.Count} adapters found.");
+    }
 
     void GenerateClick(object sender, RoutedEventArgs e)
     {
@@ -40,22 +145,31 @@ public partial class MacChangerView : UserControl
         if (!MacAddress.TryParse(NewMacBox.Text, out var target))
         {
             ShowHint("That is not a valid MAC address. " + DefaultHint, true);
-            state.SetStatus("The MAC address is not valid.");
+            NewMacBox.Focus();
+            NewMacBox.SelectAll();
             return;
         }
 
         var restart = state.Settings.RestartAdapterAfterChange;
         var from = adapter.CurrentMac;
 
-        if (state.Settings.ConfirmBeforeApplying && !Confirm(
-                "Confirm MAC change",
-                $"Adapter: {adapter.Name}\nCurrent address: {from}\nNew address: {target}",
-                restart))
+        if (state.Settings.ConfirmBeforeApplying)
         {
-            return;
+            var confirmed = await AskConfirmAsync(new ConfirmRequest(
+                $"Change the address on {adapter.Name}?",
+                restart
+                    ? "BigRat writes the new address to the driver, then restarts the adapter because Windows caches the old one. The connection drops for a few seconds."
+                    : "BigRat writes the new address to the driver. The adapter is not restarted, so Windows may keep reporting the previous address until it is.",
+                "Change address",
+                from,
+                target,
+                "If the driver rejects the write, the adapter keeps the address it has now."));
+
+            if (!confirmed) return;
         }
 
         ShowHint(DefaultHint, false);
+        ResultStrip.Visibility = Visibility.Collapsed;
 
         await state.RunAsync(async () =>
         {
@@ -64,8 +178,9 @@ public partial class MacChangerView : UserControl
 
             if (!result.Success)
             {
-                state.SetStatus(result.Message);
-                state.History.Record(adapter.Name, "Change MAC address", from, target, false, result.Message);
+                state.History.Record(adapter.Name, "Change MAC address", from, target, false, result.Message, false);
+                ShowResult(result.Message, ResultTone.Bad);
+                state.ShowToast("The address change failed.", true);
                 return;
             }
 
@@ -73,31 +188,31 @@ public partial class MacChangerView : UserControl
             var verified = updated is not null && updated.CurrentMac.Equals(target, StringComparison.OrdinalIgnoreCase);
 
             string note;
+            ResultTone tone;
             if (verified)
             {
                 note = "Windows reports the new address, so the change is active.";
-                state.SetStatus($"Address changed and verified on {adapter.Name}.");
+                tone = ResultTone.Ok;
             }
             else if (!restart)
             {
                 note = "Override written. The adapter needs a restart before the new address is active.";
-                state.SetStatus("Override written — restart the adapter to activate it.");
+                tone = ResultTone.Warn;
             }
             else
             {
                 note = "The command completed, but Windows still reports the previous address.";
-                state.SetStatus("Written, but not verified: the adapter still reports the previous address.");
+                tone = ResultTone.Warn;
             }
 
-            state.History.Record(adapter.Name, "Change MAC address", from, target, true, note);
+            state.History.Record(adapter.Name, "Change MAC address", from, target, true, note, verified);
+            ShowResult(note, tone);
 
-            if (!verified && restart)
-            {
-                MessageBox.Show(
-                    "The command completed, but Windows still reports the previous MAC address for this adapter.\n\n" +
-                    "Some drivers reject addresses outside the range the hardware accepts.",
-                    "Verification warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            state.ShowToast(
+                verified ? $"Address changed and verified on {adapter.Name}."
+                : restart ? "Written, but not verified — the adapter still reports the previous address."
+                : "Override written — restart the adapter to activate it.",
+                restart && !verified);
         });
     }
 
@@ -110,27 +225,38 @@ public partial class MacChangerView : UserControl
         // override is cleared by name, not replaced with a value, so nothing
         // about the write needs to know the address first — and on the drivers
         // that report no PermanentAddress, the adapter whose address could not
-        // be read is exactly the one with no other way back. This used to stop
-        // at a hint saying there was nothing to restore, which was not true.
+        // be read is exactly the one with no other way back.
         var original = adapter.OriginalMac;
 
         var restart = state.Settings.RestartAdapterAfterChange;
         var from = adapter.CurrentMac;
 
-        if (state.Settings.ConfirmBeforeApplying && !Confirm(
-                "Confirm restore",
-                original is null
-                    ? $"Adapter: {adapter.Name}\n" +
-                      "This removes BigRat's override and lets the adapter report its own hardware address again.\n\n" +
-                      "BigRat cannot name that address in advance: this adapter's driver does not report the burned-in address. " +
-                      "It will read it, and keep it, once the override is gone."
-                    : $"Adapter: {adapter.Name}\nThis removes BigRat's override and lets the adapter use its original hardware address ({original}).",
-                restart))
+        if (state.Settings.ConfirmBeforeApplying)
         {
-            return;
+            var body = original is null
+                ? "This removes BigRat's override and lets the adapter report its own hardware address again. "
+                  + "This driver does not report the burned-in address, so BigRat cannot name it in advance; "
+                  + "it will read it, and keep it, once the override is gone."
+                : "This removes BigRat's override and lets the adapter use its original hardware address again.";
+
+            if (restart)
+                body += " The adapter is restarted afterwards, so the connection drops for a moment.";
+            else
+                body += " The adapter is not restarted, so the hardware address may not be active until it is.";
+
+            var confirmed = await AskConfirmAsync(new ConfirmRequest(
+                $"Restore the original address on {adapter.Name}?",
+                body,
+                "Restore address",
+                from,
+                original,
+                "If the driver rejects the change, the adapter keeps the address it has now."));
+
+            if (!confirmed) return;
         }
 
         ShowHint(DefaultHint, false);
+        ResultStrip.Visibility = Visibility.Collapsed;
 
         await state.RunAsync(async () =>
         {
@@ -139,8 +265,9 @@ public partial class MacChangerView : UserControl
 
             if (!result.Success)
             {
-                state.SetStatus(result.Message);
-                state.History.Record(adapter.Name, "Restore original address", from, original ?? "Not available", false, result.Message);
+                state.History.Record(adapter.Name, "Restore original address", from, original ?? "Not available", false, result.Message, false);
+                ShowResult(result.Message, ResultTone.Bad);
+                state.ShowToast("The restore failed.", true);
                 return;
             }
 
@@ -161,53 +288,101 @@ public partial class MacChangerView : UserControl
             var discovered = original ?? updated?.OriginalMac ?? "Not available";
 
             string note;
+            ResultTone tone;
             if (restored)
             {
                 if (original is null)
                 {
                     note = $"Override removed. The adapter reports {discovered} as its hardware address, and BigRat has kept it.";
-                    state.SetStatus($"Override removed — {adapter.Name} reports {discovered}.");
                 }
                 else
                 {
                     note = "Windows reports the hardware address again, so the override is gone.";
-                    state.SetStatus($"Original address restored on {adapter.Name}.");
                 }
+                tone = ResultTone.Ok;
             }
             else if (!restart)
             {
                 note = "Override removed. The adapter needs a restart before the hardware address is active.";
-                state.SetStatus("Override removed — restart the adapter to activate the hardware address.");
+                tone = ResultTone.Warn;
             }
             else
             {
                 note = "The command completed, but Windows still reports an overridden address.";
-                state.SetStatus("Override removed, but not verified.");
+                tone = ResultTone.Warn;
             }
 
-            state.History.Record(adapter.Name, "Restore original address", from, discovered, true, note);
+            state.History.Record(adapter.Name, "Restore original address", from, discovered, true, note, restored);
+            ShowResult(note, tone);
 
-            if (!restored && restart)
-            {
-                MessageBox.Show(
-                    "The command completed, but Windows still reports a non-hardware MAC address for this adapter.",
-                    "Verification warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            state.ShowToast(
+                restored ? $"Original address restored on {adapter.Name}."
+                : restart ? "Override removed, but not verified."
+                : "Override removed — restart the adapter to activate the hardware address.",
+                restart && !restored);
         });
     }
 
-    /// <summary>Shows the confirmation dialog, spelling out what is about to happen.</summary>
-    static bool Confirm(string title, string details, bool restart)
+    // -------------------------------------------------------------- helpers
+
+    Task<bool> AskConfirmAsync(ConfirmRequest request) =>
+        state.Confirm is { } confirm ? confirm(request) : Task.FromResult(false);
+
+    void ShowResult(string message, ResultTone tone)
     {
-        var text = details;
-        if (restart) text += "\n\nThe adapter will be restarted, so the connection drops for a moment.";
-        text += "\n\nContinue?";
-        return MessageBox.Show(text, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        ResultText.Text = message;
+        ResultStrip.Style = (Style)FindResource(tone switch
+        {
+            ResultTone.Ok => "ResultBanner.Ok",
+            ResultTone.Warn => "ResultBanner.Warn",
+            _ => "ResultBanner.Bad",
+        });
+
+        // The mockup colours the whole banner, text included: green for a
+        // verified write, red for a rejected one. Without this the copy would
+        // stay the ordinary body colour on a tinted surface.
+        ResultText.Foreground = (Brush)FindResource(tone switch
+        {
+            ResultTone.Ok => "Brush.Positive",
+            ResultTone.Warn => "Brush.Warning",
+            _ => "Brush.Error",
+        });
+
+        ResultGlyph.Data = (Geometry)FindResource(tone switch
+        {
+            ResultTone.Ok => "Icon.Check",
+            ResultTone.Warn => "Icon.Info",
+            _ => "Icon.Warning",
+        });
+
+        ResultGlyph.Stroke = (Brush)FindResource(tone switch
+        {
+            ResultTone.Ok => "Brush.Positive",
+            ResultTone.Warn => "Brush.Warning",
+            _ => "Brush.Error",
+        });
+
+        ResultStrip.Visibility = Visibility.Visible;
     }
 
     void ShowHint(string message, bool isError)
     {
-        NewMacHint.Text = message;
         NewMacHint.Foreground = (Brush)FindResource(isError ? "Brush.Error" : "Brush.TextSecondary");
+        NewMacHint.Inlines.Clear();
+
+        // The resting hint sets the example address in the mono face, as the
+        // mockup does. Any other message is one sentence and plain.
+        if (!isError && message == DefaultHint)
+        {
+            NewMacHint.Inlines.Add(new Run("Any 12 hex digits. BigRat writes them as "));
+            NewMacHint.Inlines.Add(new Run("AA:BB:CC:DD:EE:FF")
+            {
+                FontFamily = (FontFamily)FindResource("Font.Mono"),
+            });
+            NewMacHint.Inlines.Add(new Run("."));
+            return;
+        }
+
+        NewMacHint.Inlines.Add(new Run(message));
     }
 }

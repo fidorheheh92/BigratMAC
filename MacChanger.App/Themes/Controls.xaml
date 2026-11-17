@@ -30,13 +30,52 @@
 
     <!-- ============================== Icons ============================= -->
 
+    <!-- The mockup's ease curve: cubic-bezier(.2,0,0,1). A shared frozen
+         easing keeps every hover/knob/chevron transition on the same curve. -->
+    <CubicEase x:Key="Ease.Out" EasingMode="EaseOut"/>
+
+    <!--
+        Every glyph is drawn on a 24 x 24 grid, exactly like the mockup's SVG
+        sprite. The fixed 24 x 24 layout box is what preserves that grid: a
+        Path's default desired size is its *tight* geometry bounds, so a
+        Viewbox would scale each glyph by a different factor and the 1.6px
+        stroke would come out heavier than the mockup's. With the box fixed,
+        the Viewbox reproduces the SVG viewBox 1:1 — a 17px icon renders the
+        same 1.13px stroke the browser draws.
+    -->
     <Style x:Key="Icon.Path" TargetType="Path">
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
         <Setter Property="StrokeThickness" Value="1.6"/>
         <Setter Property="StrokeStartLineCap" Value="Round"/>
         <Setter Property="StrokeEndLineCap" Value="Round"/>
         <Setter Property="StrokeLineJoin" Value="Round"/>
         <Setter Property="StrokeDashCap" Value="Round"/>
         <Setter Property="SnapsToDevicePixels" Value="False"/>
+    </Style>
+
+    <!--
+        The keyboard focus ring, drawn as one 2px accent outline just outside
+        the control. WPF shows it only for keyboard focus, which is the same
+        behaviour as :focus-visible in the mockup — a mouse click never draws
+        a ring over the thing that was just clicked.
+
+        Declared once and attached to every style that can take focus, so a
+        list row, a switch and a navigation item all answer the Tab key the
+        same way.
+    -->
+    <Style x:Key="FocusRing" TargetType="Control">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border BorderBrush="{DynamicResource Brush.AccentText}"
+                            BorderThickness="2"
+                            CornerRadius="8"
+                            Margin="-3"
+                            SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ============================= Surfaces =========================== -->
@@ -60,12 +99,23 @@
     <Style x:Key="Card.Well" TargetType="Border" BasedOn="{StaticResource Card}">
         <Setter Property="Background" Value="{StaticResource Brush.Well}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
-        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="Padding" Value="13,11"/>
     </Style>
 
     <Style x:Key="Divider" TargetType="Border">
         <Setter Property="Height" Value="1"/>
         <Setter Property="Background" Value="{StaticResource Brush.Divider}"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
+    <!-- A placeholder bar on the Hardware ID page while WMI is answering.
+         The pulse is driven from code-behind rather than a storyboard here so
+         it can stay still when the user has asked Windows for reduced motion. -->
+    <Style x:Key="SkeletonBar" TargetType="Border">
+        <Setter Property="Height" Value="11"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Elevated}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
 
@@ -99,6 +149,7 @@
         <Setter Property="MinWidth" Value="38"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <!-- Read back inside the template below. A variant that wants a
@@ -128,17 +179,60 @@
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- The mockup's 150ms ::after fade. Animations rather
+                             than setter snaps are what make a click feel like
+                             it landed; the exit on press goes back to the
+                             hover level, because a released press is still a
+                             hover. -->
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Overlay" Property="Opacity" Value="0.07"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Overlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.07" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Overlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Overlay" Property="Opacity" Value="0.15"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Overlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.15" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Overlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.07" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Root" Property="Opacity" Value="0.35"/>
+                            <Setter TargetName="Root" Property="Opacity" Value="0.38"/>
                             <Setter Property="Cursor" Value="Arrow"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -163,6 +257,17 @@
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
 
+    <!-- The small secondary used by empty states: 32px tall, 12.5px label and
+         the 10px corner the mockup gives every small button. -->
+    <Style x:Key="Button.SecondarySmall" TargetType="Button" BasedOn="{StaticResource Button.Secondary}">
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Padding" Value="13,0"/>
+        <Setter Property="ui:Corner.Radius" Value="{StaticResource Radius.Chip}"/>
+    </Style>
+
     <!-- Quietest: no surface until you point at it. -->
     <Style x:Key="Button.Ghost" TargetType="Button" BasedOn="{StaticResource Button.Base}">
         <Setter Property="Background" Value="Transparent"/>
@@ -173,26 +278,73 @@
         <Setter Property="MinHeight" Value="32"/>
     </Style>
 
+    <!-- The small ghost: the hero's Copy action. 32px tall with the mockup's
+         10px corner and 12.5px label. -->
+    <Style x:Key="Button.SmallGhost" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="ui:Corner.Radius" Value="{StaticResource Radius.Chip}"/>
+    </Style>
+
+    <!-- The quiet text link: "View all", "Settings". Accent text that earns a
+         tinted pad under the pointer instead of a whole button surface. -->
+    <Style x:Key="Button.Link" TargetType="Button" BasedOn="{StaticResource Button.Base}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="ui:Corner.Radius" Value="6"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Brush.AccentSoft}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The rail's collapse row: 32px, left-aligned, 12px tertiary type.
+         The window can centre it when the rail is narrow by changing the
+         content alignment in MainWindow.xaml. -->
+    <Style x:Key="Button.Collapse" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="ui:Corner.Radius" Value="{StaticResource Radius.Rail}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Destructive, but restrained: it only turns red once you reach for it. -->
     <Style x:Key="Button.Danger" TargetType="Button" BasedOn="{StaticResource Button.Base}">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Error}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="11,0"/>
-        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="MinHeight" Value="38"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Foreground" Value="{StaticResource Brush.Error}"/>
                 <Setter Property="Background" Value="{StaticResource Brush.ErrorSoft}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
 
-    <!-- Square, icon-only button used in page headers and toolbars. -->
+    <!-- Square, icon-only button used in page headers and toolbars.
+         The mockup's 34x34, 10px radius, transparent-at-rest icon button:
+         the surface only appears under the pointer, from a named layer so its
+         fade can be animated. -->
     <Style x:Key="Button.Icon" TargetType="Button" BasedOn="{StaticResource Button.Base}">
-        <Setter Property="Background" Value="{StaticResource Brush.Elevated}"/>
-        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="1"/>
         <!-- All four size properties, deliberately. Button.Base carries
@@ -200,10 +352,10 @@
              the button is clamped up to 38 and the two extra pixels land on one
              side, so a square icon button renders 38x36 with its glyph off
              centre. -->
-        <Setter Property="Width" Value="36"/>
-        <Setter Property="Height" Value="36"/>
-        <Setter Property="MinWidth" Value="36"/>
-        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="MinWidth" Value="34"/>
+        <Setter Property="MinHeight" Value="34"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -212,19 +364,48 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource Radius.Chip}"
+                            CornerRadius="10"
                             SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Grid>
+                            <Border x:Name="Hover"
+                                    Background="{StaticResource Brush.CardHover}"
+                                    CornerRadius="10"
+                                    Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.ElevatedHover}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                            <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Hover" Property="Background" Value="{StaticResource Brush.ElevatedHover}"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Root" Property="Opacity" Value="0.35"/>
+                            <Setter TargetName="Root" Property="Opacity" Value="0.38"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -232,40 +413,74 @@
         </Setter>
     </Style>
 
-    <!--
-        A full-width row that lives on the sidebar rail: the selected-adapter
-        summary at the bottom of the navigation column.
-
-        It has no resting surface at all, so it reads as part of the rail
-        rather than as another card that happens to be sitting on it. Hover is
-        the only thing that tells you it is clickable, and that is enough.
-
-        The corner is the one thing it does not inherit, and deliberately so.
-        Radius.Control matches a 38px button; on this row — which is only as
-        tall as the two lines of text inside it — the same radius ate a third
-        of the height and the hover rectangle read as a pill. Radius.Rail
-        keeps it a rounded rectangle. See Controls/Corner.cs for why this is
-        an attached property rather than a second copy of the template.
-    -->
-    <Style x:Key="Button.Row" TargetType="Button" BasedOn="{StaticResource Button.Base}">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="MinHeight" Value="0"/>
-        <Setter Property="Padding" Value="9,8"/>
-        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        <Setter Property="VerticalContentAlignment" Value="Top"/>
-        <Setter Property="ui:Corner.Radius" Value="{StaticResource Radius.Rail}"/>
+    <!-- The die inside the address field: 34x34, 9px corner, on the elevated
+         surface at rest rather than transparent, because it floats over the
+         input and needs an edge of its own. -->
+    <Style x:Key="Button.Dice" TargetType="Button" BasedOn="{StaticResource Button.Icon}">
+        <Setter Property="Background" Value="{StaticResource Brush.Elevated}"/>
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="MinWidth" Value="34"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="9"
+                            SnapsToDevicePixels="True">
+                        <Grid>
+                            <Border x:Name="Hover"
+                                    Background="{StaticResource Brush.ElevatedHover}"
+                                    CornerRadius="9"
+                                    Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                            <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.38"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- =========================== Navigation ========================== -->
 
     <!--
-        A navigation row: a 3px accent marker, an icon, then a quiet label.
-        The icon takes its colour from the row's Foreground, so the checked
-        and hover triggers below recolour the glyph for free.
+        A navigation row: an icon and a quiet label, with a 3px accent marker
+        that belongs to the *rail edge*, not to the row.
 
         A nav item supplies three things:
 
@@ -276,9 +491,14 @@
         Tag is the icon because a RadioButton only has one Content, and the
         label is what screen readers should read out.
 
-        On a collapsed rail the label and marker are dropped and the icon is
-        centred on the row on its own, so the same style serves both the
-        expanded and the icon-only rail.
+        The marker is positioned at -12px, exactly as the mockup's
+        `.navitem::before { left:-12px }`, so it sits against the application
+        edge and survives the collapsed rail. Drawing it inside the row's own
+        padding, as the previous template did, left it floating 12px inboard
+        and cut it off entirely when the rail narrowed.
+
+        On a collapsed rail the label is dropped and the icon is centred, while
+        the marker stays where it is.
     -->
     <Style x:Key="NavItem" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
@@ -289,6 +509,7 @@
         <Setter Property="Height" Value="36"/>
         <Setter Property="Margin" Value="0,0,0,2"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
         <Setter Property="ui:Corner.Radius" Value="{StaticResource Radius.Rail}"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -297,72 +518,111 @@
                             Background="Transparent"
                             CornerRadius="{Binding Path=(ui:Corner.Radius), RelativeSource={RelativeSource TemplatedParent}}"
                             SnapsToDevicePixels="True">
-                        <Grid x:Name="Shell" Margin="9,0,11,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="3"/>
-                                <ColumnDefinition Width="11"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                        <Grid>
+                            <!-- Hover is a layer so the 150ms colour change the
+                                 mockup asks for can be animated. -->
+                            <Border x:Name="HoverLayer"
+                                    Background="{StaticResource Brush.CardHover}"
+                                    CornerRadius="{Binding Path=(ui:Corner.Radius), RelativeSource={RelativeSource TemplatedParent}}"
+                                    Opacity="0"/>
+
+                            <!-- The selection marker, at the rail's own edge. -->
                             <Border x:Name="Marker"
-                                    Width="3" Height="16"
-                                    CornerRadius="2"
+                                    Width="3" Height="18"
+                                    CornerRadius="0,3,3,0"
+                                    HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
+                                    Margin="-12,0,0,0"
                                     Background="{DynamicResource Brush.Accent}"
                                     Opacity="0"/>
-                            <Viewbox x:Name="Glyph"
-                                     Grid.Column="2"
-                                     Width="17" Height="17"
-                                     VerticalAlignment="Center">
-                                <Path Data="{TemplateBinding Tag}"
-                                      Stroke="{TemplateBinding Foreground}"
-                                      StrokeThickness="1.6"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      StrokeLineJoin="Round"/>
-                            </Viewbox>
-                            <TextBlock x:Name="Label"
-                                       Grid.Column="4"
-                                       Text="{TemplateBinding Content}"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
+
+                            <StackPanel x:Name="ContentPanel"
+                                        Orientation="Horizontal"
+                                        Margin="10,0"
+                                        VerticalAlignment="Center">
+                                <Viewbox x:Name="Glyph" Width="17" Height="17">
+                                    <Path Data="{TemplateBinding Tag}"
+                                          Stroke="{TemplateBinding Foreground}"
+                                          StrokeThickness="1.6"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"/>
+                                </Viewbox>
+                                <TextBlock x:Name="Label"
+                                           Margin="11,0,0,0"
+                                           Text="{TemplateBinding Content}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.CardHover}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverLayer"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverLayer"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.AccentSoft}"/>
+                            <Setter TargetName="HoverLayer" Property="Visibility" Value="Hidden"/>
                             <Setter TargetName="Marker" Property="Opacity" Value="1"/>
+                            <Setter TargetName="Label" Property="FontWeight" Value="SemiBold"/>
                             <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Marker"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Marker"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="0.4"/>
                         </Trigger>
 
                         <!--
-                            The collapsed rail: the label and the accent marker
-                            go, and the icon moves out to span the whole row so
-                            it lands on the rail's centre line rather than
-                            staying where the marker used to be. The tinted
-                            background stays, so the current page is still
-                            obvious without the marker.
-
-                            The label is still the Content, so it becomes the
-                            tooltip instead. Without that, a collapsed rail is
-                            five unlabelled glyphs and the only way to learn
-                            what any of them does is to click it.
+                            The collapsed rail: the label goes, the icon centres
+                            on the row, and the marker stays at the edge. The
+                            label is still the Content, so it becomes the
+                            tooltip instead — a collapsed rail of five
+                            unlabelled glyphs would otherwise be a guessing
+                            game.
                         -->
                         <DataTrigger Binding="{Binding Settings.SidebarCollapsed}" Value="True">
                             <Setter TargetName="Label" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="Marker" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="Shell" Property="Margin" Value="0"/>
-                            <Setter TargetName="Glyph" Property="Grid.Column" Value="0"/>
-                            <Setter TargetName="Glyph" Property="Grid.ColumnSpan" Value="5"/>
-                            <Setter TargetName="Glyph" Property="HorizontalAlignment" Value="Center"/>
+                            <Setter TargetName="ContentPanel" Property="Margin" Value="0"/>
+                            <Setter TargetName="ContentPanel" Property="HorizontalAlignment" Value="Center"/>
                             <Setter Property="ToolTip"
                                     Value="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"/>
                         </DataTrigger>
@@ -374,53 +634,105 @@
 
     <!-- ============================ Inputs ============================= -->
 
+    <!--
+        The address field, matched to the mockup's `.input`:
+
+            height 46, a recessed well, 1px #5A6068 edge at rest,
+            mono 16 with .03em tracking, a 52px right gutter for the die,
+            an accent edge plus a 3px accent-soft ring on focus, and
+            #2B2F35 on hover.
+
+        The ring is its own layer behind the field rather than a second
+        border, so the field's 1px edge stays crisp instead of being
+        doubled by the ring's inner edge.
+    -->
     <Style x:Key="TextBox.App" TargetType="TextBox">
         <Setter Property="Background" Value="{StaticResource Brush.Well}"/>
         <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
         <Setter Property="CaretBrush" Value="{DynamicResource Brush.Accent}"/>
         <Setter Property="SelectionBrush" Value="{DynamicResource Brush.Accent}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Brush.Divider}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="FontFamily" Value="{StaticResource Font.Mono}"/>
         <Setter Property="FontSize" Value="16"/>
-        <Setter Property="Padding" Value="14,0"/>
-        <Setter Property="MinHeight" Value="44"/>
+        <Setter Property="Padding" Value="14,0,52,0"/>
+        <Setter Property="MinHeight" Value="46"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="Root"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource Radius.Control}"
-                            SnapsToDevicePixels="True">
-                        <Grid>
-                            <!-- Placeholder, taken from Tag -->
-                            <TextBlock x:Name="Placeholder"
-                                       Text="{TemplateBinding Tag}"
-                                       Margin="{TemplateBinding Padding}"
-                                       VerticalAlignment="Center"
-                                       IsHitTestVisible="False"
-                                       FontFamily="{StaticResource Font.UI}"
-                                       FontSize="13"
-                                       Foreground="{StaticResource Brush.TextTertiary}"
-                                       Visibility="Collapsed"/>
-                            <ScrollViewer x:Name="PART_ContentHost"
-                                          Margin="{TemplateBinding Padding}"
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-                    </Border>
+                    <Grid>
+                        <!-- 3px outside the field, at the same corner radius
+                             plus the ring's own width. -->
+                        <Border x:Name="FocusRing"
+                                Margin="-3"
+                                CornerRadius="17"
+                                BorderBrush="{DynamicResource Brush.AccentSoft}"
+                                BorderThickness="3"
+                                Opacity="0"
+                                IsHitTestVisible="False"/>
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{StaticResource Radius.Control}"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <!-- Placeholder, taken from Tag. Mono, like the
+                                     address that will replace it. -->
+                                <TextBlock x:Name="Placeholder"
+                                           Text="{TemplateBinding Tag}"
+                                           Margin="{TemplateBinding Padding}"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"
+                                           FontFamily="{StaticResource Font.Mono}"
+                                           FontSize="16"
+                                           Foreground="{StaticResource Brush.TextTertiary}"
+                                           Visibility="Collapsed"/>
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="Text" Value="">
                             <Setter TargetName="Placeholder" Property="Visibility" Value="Visible"/>
                         </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Brush.ElevatedHover}"/>
+                        </Trigger>
                         <Trigger Property="IsKeyboardFocusWithin" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusRing"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusRing"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="Validation.HasError" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Brush.Error}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Root" Property="Opacity" Value="0.4"/>
+                            <Setter TargetName="Root" Property="Opacity" Value="0.55"/>
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Brush.Divider}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -434,6 +746,7 @@
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Margin" Value="0,5"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
@@ -480,38 +793,105 @@
         </Setter>
     </Style>
 
-    <!-- Pill-shaped on/off switch for the Settings page. -->
+    <!-- Pill-shaped on/off switch for the Settings page: 40x24 track, 16px
+         knob travelling 16px, and a 150ms slide rather than an alignment
+         snap. The knob is moved with a TranslateTransform because
+         HorizontalAlignment is a discrete property and cannot be animated. -->
     <Style x:Key="Toggle.Switch" TargetType="CheckBox">
         <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
         <Setter Property="FontFamily" Value="{StaticResource Font.UI}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
-                    <Border x:Name="Track"
-                            Width="40" Height="24"
-                            CornerRadius="12"
-                            Background="{StaticResource Brush.Elevated}"
-                            SnapsToDevicePixels="True">
+                    <Grid Width="40" Height="24" Background="Transparent">
+                        <Border x:Name="Track"
+                                CornerRadius="12"
+                                Background="{StaticResource Brush.Elevated}"
+                                SnapsToDevicePixels="True"/>
+                        <!-- CSS `filter:brightness(1.1)` has no direct WPF
+                             equivalent; a 6% white veil is the same lift on
+                             both the charcoal and the lime track. -->
+                        <Border x:Name="Brighten"
+                                CornerRadius="12"
+                                Background="{StaticResource Brush.Text}"
+                                Opacity="0"
+                                IsHitTestVisible="False"/>
                         <Ellipse x:Name="Knob"
                                  Width="16" Height="16"
-                                 Fill="{StaticResource Brush.TextTertiary}"
+                                 Fill="{StaticResource Brush.TextSecondary}"
                                  HorizontalAlignment="Left"
-                                 Margin="4,0,0,0"/>
-                    </Border>
+                                 VerticalAlignment="Center"
+                                 Margin="4,0,0,0">
+                            <Ellipse.RenderTransform>
+                                <TranslateTransform X="0"/>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Track" Property="Background" Value="{DynamicResource Brush.Accent}"/>
                             <Setter TargetName="Knob" Property="Fill" Value="{StaticResource Brush.TextOnAccent}"/>
-                            <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
-                            <Setter TargetName="Knob" Property="Margin" Value="0,0,4,0"/>
+                            <!--
+                                A setter on the element, not on the transform:
+                                a Setter can only name an element. It gives the
+                                knob its resting checked position even before
+                                (or without) the animation, and the animations
+                                below still address the transform by property
+                                path, so they work with the setter's instance.
+                            -->
+                            <Setter TargetName="Knob" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform X="16"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Knob"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                         From="0" To="16" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Knob"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                         From="16" To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Track" Property="Opacity" Value="0.85"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Brighten"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.06" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Brighten"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.4"/>
+                            <Setter Property="Opacity" Value="0.38"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -530,28 +910,57 @@
         <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
     </Style>
 
-    <!-- Adapter row in the MAC Changer picker -->
+    <!-- Adapter row in the MAC Changer picker: 10px padding, a 12px corner,
+         and a 150ms hover fade from a layer so the selected tint underneath
+         is never replaced by a snap. -->
     <Style x:Key="ListBoxItem.Adapter" TargetType="ListBoxItem">
-        <Setter Property="Padding" Value="12,9"/>
+        <Setter Property="Padding" Value="10"/>
         <Setter Property="Margin" Value="0,0,0,3"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
                     <Border x:Name="Root"
                             Background="Transparent"
-                            CornerRadius="{StaticResource Radius.Control}"
-                            Padding="{TemplateBinding Padding}"
+                            CornerRadius="12"
                             SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Stretch"/>
+                        <Grid>
+                            <Border x:Name="Hover"
+                                    Background="{StaticResource Brush.CardHover}"
+                                    CornerRadius="12"
+                                    Opacity="0"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Stretch"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.CardHover}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource Brush.AccentSoft}"/>
+                            <Setter TargetName="Hover" Property="Visibility" Value="Hidden"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -559,31 +968,24 @@
         </Setter>
     </Style>
 
-    <!-- Accent swatch in the Settings page picker -->
+    <!-- Accent swatch in the Settings page picker. The container draws no
+         chrome of its own: the swatch inside it carries the colour, the name
+         sits under it, and selection is the check mark rather than an outline.
+         An outline on every unselected swatch would turn four colours into
+         four bordered boxes and make the colour the second thing you see.
+         The 16px gap is the mockup's `.accents { gap: 16px }`, expressed here
+         as the item's right margin because WPF's WrapPanel has no gap. -->
     <Style x:Key="ListBoxItem.Accent" TargetType="ListBoxItem">
-        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="Margin" Value="0,0,16,16"/>
+        <Setter Property="Padding" Value="0"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Root"
-                            Background="{StaticResource Brush.Well}"
-                            BorderBrush="Transparent"
-                            BorderThickness="1"
-                            CornerRadius="{StaticResource Radius.Control}"
-                            Padding="11,9"
-                            SnapsToDevicePixels="True">
+                    <Border Background="Transparent" Padding="{TemplateBinding Padding}">
                         <ContentPresenter/>
                     </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.Elevated}"/>
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.Elevated}"/>
-                            <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -593,46 +995,108 @@
 
     <!--
         Collapsible card used by the HWID page so that a long list of hardware
-        sections does not become a wall of text. The header row is a toggle
-        button; the chevron flips when the section opens.
+        sections does not become a wall of text.
+
+        The header is the mockup's `.exp-head`: full width of the card, 15px
+        above and below, 17px inside, a 150ms hover tint, and a 16px chevron
+        that turns through 180 degrees over 180ms. The hover layer rounds its
+        bottom corners only while the section is collapsed, so a hovered
+        header still fits inside the card's 14px corners; when the section is
+        open the card's corners belong to the body instead.
     -->
     <Style x:Key="Expander.Header" TargetType="ToggleButton">
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Grid Background="Transparent" MinHeight="26">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ContentPresenter VerticalAlignment="Center"/>
-                        <Path x:Name="Chevron"
-                              Grid.Column="1"
-                              Width="15" Height="15"
-                              VerticalAlignment="Center"
-                              Margin="10,0,0,0"
-                              Data="{StaticResource Icon.Chevron}"
-                              Style="{StaticResource Icon.Path}"
-                              Stroke="{StaticResource Brush.TextTertiary}"
-                              Stretch="Uniform"
-                              RenderTransformOrigin="0.5,0.5">
-                            <Path.RenderTransform>
-                                <RotateTransform Angle="0"/>
-                            </Path.RenderTransform>
-                        </Path>
+                    <Grid Background="Transparent">
+                        <Border x:Name="HoverLayer"
+                                Background="{StaticResource Brush.CardHover}"
+                                CornerRadius="14"
+                                Opacity="0"
+                                IsHitTestVisible="False"/>
+                        <Grid Margin="17,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                            <Viewbox Grid.Column="1"
+                                     Width="16" Height="16"
+                                     VerticalAlignment="Center"
+                                     Margin="10,0,0,0">
+                                <Path x:Name="Chevron"
+                                      Data="{StaticResource Icon.Chevron}"
+                                      Style="{StaticResource Icon.Path}"
+                                      Stroke="{StaticResource Brush.TextTertiary}"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Path.RenderTransform>
+                                        <RotateTransform x:Name="ChevronRotate" Angle="0"/>
+                                    </Path.RenderTransform>
+                                </Path>
+                            </Viewbox>
+                        </Grid>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverLayer"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverLayer"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                             <Setter TargetName="Chevron" Property="Stroke" Value="{StaticResource Brush.Text}"/>
                         </Trigger>
+                        <Trigger Property="IsChecked" Value="False">
+                            <Setter TargetName="HoverLayer" Property="CornerRadius" Value="14"/>
+                        </Trigger>
                         <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="HoverLayer" Property="CornerRadius" Value="14,14,0,0"/>
+                            <!-- Same shape as the switch knob: a Setter can
+                                 only name an element, so the resting angle is
+                                 set on the Path and the animation addresses
+                                 the transform by property path. -->
                             <Setter TargetName="Chevron" Property="RenderTransform">
                                 <Setter.Value>
                                     <RotateTransform Angle="180"/>
                                 </Setter.Value>
                             </Setter>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Chevron"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                         From="0" To="180" Duration="0:0:0.18"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Chevron"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                         From="180" To="0" Duration="0:0:0.18"
+                                                         EasingFunction="{StaticResource Ease.Out}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -645,8 +1109,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
                     <Border Background="{StaticResource Brush.Card}"
-                            CornerRadius="{StaticResource Radius.Card}"
-                            Padding="{StaticResource Pad.Card}"
+                            CornerRadius="{StaticResource Radius.Control}"
                             SnapsToDevicePixels="True">
                         <StackPanel>
                             <ToggleButton Style="{StaticResource Expander.Header}"
@@ -654,7 +1117,7 @@
                                           Content="{TemplateBinding Header}"/>
                             <ContentPresenter x:Name="Body"
                                               Visibility="Collapsed"
-                                              Margin="0,14,0,0"/>
+                                              Margin="45,0,17,16"/>
                         </StackPanel>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -681,18 +1144,21 @@
         </Setter>
     </Style>
 
+    <!-- The mockup's 11px scrollbar: a 3px inset leaves a 5px pill, so the
+         thumb reads as a thin handle rather than a bar competing with the
+         content beside it. -->
     <Style x:Key="ScrollBar.Thumb" TargetType="Thumb">
-        <Setter Property="Background" Value="{StaticResource Brush.Divider}"/>
+        <Setter Property="Background" Value="{StaticResource Brush.BorderStrong}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border Background="{TemplateBinding Background}" CornerRadius="3" Margin="3,2"/>
+                    <Border Background="{TemplateBinding Background}" CornerRadius="8" Margin="3"/>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource Brush.TextDisabled}"/>
+                <Setter Property="Background" Value="{StaticResource Brush.TextTertiary}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -728,10 +1194,10 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="Orientation" Value="Vertical">
-                <Setter Property="Width" Value="10"/>
+                <Setter Property="Width" Value="11"/>
             </Trigger>
             <Trigger Property="Orientation" Value="Horizontal">
-                <Setter Property="Height" Value="10"/>
+                <Setter Property="Height" Value="11"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -744,6 +1210,59 @@
     </Style>
 
     <!-- ============================ Tooltips =========================== -->
+
+    <!--
+        An inline link, used where a sentence has to hand the reader to
+        another page. Accent-coloured at 12.5px semibold, as in the mockup,
+        with the accent-soft pad appearing under the pointer. The mockup's
+        rounded pad cannot be reproduced inline inside a sentence — WPF's
+        Hyperlink has no corner radius — so the hover reads as a tinted
+        highlight instead of a pill.
+    -->
+    <Style x:Key="Hyperlink.App" TargetType="Hyperlink">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.AccentText}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="TextDecorations" Value="{x:Null}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Brush.AccentSoft}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ======================== Result banner ========================== -->
+
+    <!-- The outcome of the action above it, on the page that ran the action
+         rather than in the title strip. -->
+    <Style x:Key="ResultBanner" TargetType="Border">
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
+        <Setter Property="Padding" Value="15,13"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
+    <Style x:Key="ResultBanner.Ok" TargetType="Border" BasedOn="{StaticResource ResultBanner}">
+        <Setter Property="Background" Value="{StaticResource Brush.PositiveSoft}"/>
+    </Style>
+
+    <Style x:Key="ResultBanner.Bad" TargetType="Border" BasedOn="{StaticResource ResultBanner}">
+        <Setter Property="Background" Value="{StaticResource Brush.ErrorSoft}"/>
+    </Style>
+
+    <Style x:Key="ResultBanner.Warn" TargetType="Border" BasedOn="{StaticResource ResultBanner}">
+        <Setter Property="Background" Value="{StaticResource Brush.WarningSoft}"/>
+    </Style>
+
+    <!-- The confirming button in a dialog that deletes something. Solid red
+         rather than the accent, because the accent means "the primary action"
+         and this is the one place where those two are not the same thing. -->
+    <Style x:Key="Button.DangerSolid" TargetType="Button" BasedOn="{StaticResource Button.Base}">
+        <Setter Property="Background" Value="{StaticResource Brush.DangerSolid}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextOnDanger}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
 
     <Style TargetType="ToolTip">
         <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>

@@ -10,6 +10,9 @@ public sealed record HardwareFact(string Label, string Value);
 public sealed record HardwareSection(string Title, string Note, IReadOnlyList<HardwareFact> Facts)
 {
     public bool HasNote => !string.IsNullOrEmpty(Note);
+
+    /// <summary>The fact count as the section header shows it, singular or plural.</summary>
+    public string FactCountText => $"{Facts.Count} {(Facts.Count == 1 ? "value" : "values")}";
 }
 
 /// <summary>

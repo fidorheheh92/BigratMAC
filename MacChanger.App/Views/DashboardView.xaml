@@ -7,483 +7,518 @@
         DashboardView.xaml
         ====================================================================
 
-        The landing page answers six questions in reading order, and nothing
+        The landing page answers five questions in reading order, and nothing
         else is on it:
 
-            1. what is BigRat          the page subtitle
-            2. which adapter           the hero card's title
-            3. what state is it in     the status chip and the address pair
-            4. what is it carrying     the Connection card
-            5. what can I do next      the actions at the foot of the hero card
-            6. what happened recently  the activity card below
+            1. which adapter           the hero card
+            2. what state is it in     the status chip and the address pair
+            3. what is it carrying     the Connection card
+            4. what can I do next      the action at the foot of the hero
+            5. what happened recently  the activity card beside the reading
 
-        There is deliberately no row of three statistic tiles. "Adapters
-        detected / Connected now / Changes this session" made three numbers
-        look as important as the adapter itself. There is no line restating
-        the adapter count either: a permanent "N adapter(s) ..." sentence is
-        the status-bar treatment this redesign removed, and the adapter list
-        on the MAC Changer page already answers the question properly.
+        The hero spans both columns; the live reading and the record sit side by
+        side underneath it. The old layout stacked three full-width cards, which
+        put the one live figure and the one historical list in a single column
+        and made the page a scroll rather than a glance.
+
+        There is deliberately no row of statistic tiles and no permanent status
+        sentence: the adapter on screen is the status, and the MAC Changer page
+        is where the list behind it is read properly.
     -->
     <ScrollViewer Style="{StaticResource ScrollViewer.Page}">
-        <StackPanel Margin="{StaticResource Pad.Page}" MaxWidth="940">
+        <StackPanel Margin="{StaticResource Pad.Page}" MaxWidth="1180">
 
-            <!--
-                ============================= Header =============================
-
-                Title and subtitle, and nothing else. The refresh button used to
-                live in the top right of this row: a bare 36px icon in a corner
-                of its own with nothing on the page aligned against it, which is
-                what made it read as detached rather than as part of the card it
-                acts on. It has moved down into the hero card's action row, with
-                a word on it.
-            -->
+            <!-- ============================== Header ============================== -->
             <StackPanel>
                 <TextBlock Text="Dashboard" Style="{StaticResource Text.PageTitle}"/>
                 <TextBlock Style="{StaticResource Text.PageSubtitle}"
-                           Text="BigRat changes the MAC address Windows reports for a network adapter. Everything on this page is read from this machine. The connection figures are sampled locally — never estimated, and never sent anywhere."/>
+                           Text="This machine's adapter, and what it is doing right now."/>
             </StackPanel>
 
-            <!-- =========================== Hero card =========================== -->
-            <Border Style="{StaticResource Card}" Margin="0,20,0,0">
-                <StackPanel>
+            <Grid Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.45*"/>
+                    <ColumnDefinition Width="22"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="22"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                    <!-- Identity and state -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Margin="0,0,16,0">
-                            <TextBlock Text="WORKING WITH" Style="{StaticResource Text.SectionLabel}"/>
-                            <TextBlock Style="{StaticResource Text.CardTitle}"
-                                       FontSize="18"
-                                       Margin="0,7,0,0"
-                                       TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SelectedAdapter.Name, FallbackValue=No adapter selected, TargetNullValue=No adapter selected}"/>
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       Margin="0,5,0,0"
-                                       Text="{Binding SelectedAdapter.InterfaceType, FallbackValue=—, TargetNullValue=—}"/>
-                        </StackPanel>
+                <!-- =========================== Hero card =========================== -->
+                <Border Grid.ColumnSpan="3" Style="{StaticResource Card}">
+                    <StackPanel>
 
-                        <!-- Status chip: a rounded rectangle, not a pill. -->
-                        <Border Grid.Column="1"
-                                Style="{StaticResource Chip}"
-                                VerticalAlignment="Top"
-                                Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                         Fill="{Binding SelectedAdapter.Status, Converter={StaticResource StatusBrush}}"/>
-                                <TextBlock Margin="7,0,0,0"
-                                           VerticalAlignment="Center"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Text="{Binding SelectedAdapter.Status, FallbackValue=Unknown, TargetNullValue=Unknown}"
-                                           Foreground="{Binding SelectedAdapter.Status, Converter={StaticResource StatusBrush}}"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <!-- Nothing selected: say so plainly instead of showing blanks -->
-                    <TextBlock Style="{StaticResource Text.Secondary}"
-                               Margin="0,16,0,0"
-                               Visibility="{Binding HasNoSelection, Converter={StaticResource BoolToVisible}}"
-                               Text="No adapter is selected. Use Refresh below to look again, or pick one on the MAC Changer page."/>
-
-                    <!-- ===================== Address pair ====================== -->
-                    <Grid Margin="0,20,0,0"
-                          Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Margin="0,0,16,0">
-                            <TextBlock Text="ADDRESS IN USE" Style="{StaticResource Text.SectionLabel}"/>
-                            <TextBlock Style="{StaticResource Text.MonoAccent}"
-                                       Margin="0,8,0,0"
-                                       Text="{Binding SelectedAdapter.CurrentMac, FallbackValue=—, TargetNullValue=—}"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="ORIGINAL HARDWARE ADDRESS" Style="{StaticResource Text.SectionLabel}"/>
-                            <TextBlock Style="{StaticResource Text.MonoSecondary}"
-                                       Margin="0,8,0,0"
-                                       FontSize="20"
-                                       TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SelectedAdapter.OriginalMac, FallbackValue=Not available, TargetNullValue=Not available}"/>
-
-                            <!--
-                                Shown only when there is no original to show, so
-                                the page explains the gap rather than leaving the
-                                reader to decide whether it is a bug. It is a real
-                                limit of the platform, not a missing feature:
-                                several drivers never report the burned-in
-                                address at all, and once an override is written
-                                there is nothing left on the machine to ask.
-                            -->
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       FontSize="11"
-                                       Margin="0,8,0,0"
-                                       Visibility="{Binding SelectedAdapter.OriginalMac, Converter={StaticResource TextToCollapsed}}"
-                                       Text="This adapter's driver does not report its burned-in address. BigRat writes it down the first time it sees this adapter without an override, and shows it here from then on."/>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- ======================= Connection ======================= -->
-                    <StackPanel Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
-                        <Border Style="{StaticResource Divider}" Margin="0,18,0,16"/>
-
+                        <!-- Identity and state -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
 
-                            <TextBlock Text="IPv4" Style="{StaticResource Text.Secondary}"/>
-                            <TextBlock Grid.Column="1" Style="{StaticResource Text.Mono}" Margin="14,0,24,0"
-                                       Text="{Binding SelectedAdapter.IPv4, FallbackValue=—, TargetNullValue=—}"/>
-                            <TextBlock Grid.Column="2" Text="Gateway" Style="{StaticResource Text.Secondary}"/>
-                            <TextBlock Grid.Column="3" Style="{StaticResource Text.Mono}" Margin="14,0,0,0"
-                                       TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SelectedAdapter.Gateway, FallbackValue=—, TargetNullValue=—}"/>
+                            <Border Width="44" Height="44"
+                                    CornerRadius="13"
+                                    Background="{StaticResource Brush.Elevated}"
+                                    VerticalAlignment="Center">
+                                <Viewbox Width="24" Height="24">
+                                    <Path Data="{Binding SelectedAdapter.InterfaceType, Converter={StaticResource AdapterIcon}}"
+                                          Style="{StaticResource Icon.Path}"
+                                          Stroke="{StaticResource Brush.TextSecondary}"/>
+                                </Viewbox>
+                            </Border>
 
-                            <TextBlock Grid.Row="1" Text="IPv6" Style="{StaticResource Text.Secondary}" Margin="0,12,0,0"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Text.Mono}" Margin="14,12,24,0"
-                                       TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SelectedAdapter.IPv6, FallbackValue=—, TargetNullValue=—}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" Text="Link speed" Style="{StaticResource Text.Secondary}" Margin="0,12,0,0"/>
-                            <TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource Text.Mono}" Margin="14,12,0,0"
-                                       Text="{Binding SelectedAdapter.LinkSpeed, Converter={StaticResource LinkSpeed}}"/>
+                            <StackPanel Grid.Column="1" Margin="13,0,16,0"
+                                        VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource Text.CardTitle}"
+                                           FontSize="15"
+                                           TextTrimming="CharacterEllipsis"
+                                           Text="{Binding SelectedAdapter.Name, FallbackValue=No adapter selected, TargetNullValue=No adapter selected}"/>
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
+                                    <Run Text="{Binding SelectedAdapter.InterfaceType, Mode=OneWay, Converter={StaticResource InterfaceTypeText}, FallbackValue=—, TargetNullValue=—}"/>
+                                    <Run Text=" · "/>
+                                    <Run Text="{Binding SelectedAdapter.LinkSpeed, Mode=OneWay, Converter={StaticResource LinkSpeed}, ConverterParameter=link, FallbackValue=—}"/>
+                                    <Run Text=" · "/>
+                                    <Run Text="{Binding SelectedAdapter.Status, Mode=OneWay, Converter={StaticResource StatusText}, FallbackValue=Unknown, TargetNullValue=Unknown}"/>
+                                </TextBlock>
 
-                            <TextBlock Grid.Row="2" Text="DNS" Style="{StaticResource Text.Secondary}" Margin="0,12,0,0"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3"
-                                       Style="{StaticResource Text.Mono}" Margin="14,12,0,0"
-                                       TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SelectedAdapter.DnsServers, FallbackValue=—, TargetNullValue=—}"/>
+                                <!-- Three possible reasons the hero has no adapter,
+                                     and they are not interchangeable. A scan in
+                                     progress must not read as "none found", and
+                                     a scan that failed must not blame the
+                                     machine's drivers for it. -->
+                                <StackPanel Margin="0,3,0,0"
+                                            Visibility="{Binding HasNoSelection, Converter={StaticResource BoolToVisible}}">
+                                    <TextBlock Text="Scanning for adapters…">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Secondary}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsScanningAdapters}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <TextBlock Text="The adapter scan failed. Use Rescan on the MAC Changer page to try again.">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Secondary}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ScanFailed}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <TextBlock Text="No supported adapter was found. Rescan on the MAC Changer page to look again.">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Text.Secondary}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsScanningAdapters}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ScanFailed}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Status chip: a rounded rectangle, not a pill. -->
+                            <Border Grid.Column="2"
+                                    Style="{StaticResource Chip.Small}"
+                                    VerticalAlignment="Center"
+                                    Background="{Binding SelectedAdapter.Status, Converter={StaticResource StatusSoftBrush}}"
+                                    Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                             Fill="{Binding SelectedAdapter.Status, Converter={StaticResource StatusBrush}}"/>
+                                    <TextBlock Margin="7,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Text="{Binding SelectedAdapter.Status, Converter={StaticResource StatusText}, FallbackValue=Unknown, TargetNullValue=Unknown}"
+                                               Foreground="{Binding SelectedAdapter.Status, Converter={StaticResource StatusBrush}}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="2"
+                                    Style="{StaticResource Chip.Small}"
+                                    VerticalAlignment="Center"
+                                    Background="{StaticResource Brush.MutedSoft}"
+                                    Visibility="{Binding HasNoSelection, Converter={StaticResource BoolToVisible}}">
+                                <TextBlock FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Text="None"
+                                           Foreground="{StaticResource Brush.TextSecondary}"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- ===================== Address and action ===================== -->
+                        <Border Style="{StaticResource Divider}" Margin="0,20,0,18"
+                                Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}"/>
+                        <Grid Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Margin="0,0,28,0" VerticalAlignment="Bottom">
+                                <TextBlock Text="CURRENT ADDRESS" Style="{StaticResource Text.SectionLabel}"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0" MinHeight="30">
+                                    <TextBlock Style="{StaticResource Text.MonoAccent}"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding SelectedAdapter.CurrentMac, FallbackValue=—, TargetNullValue=—}"/>
+                                    <Button Style="{StaticResource Button.SmallGhost}"
+                                            Margin="4,0,0,0"
+                                            Click="CopyAddressClick"
+                                            ToolTip="Copy the current address to the clipboard"
+                                            AutomationProperties.Name="Copy current address">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Viewbox Width="16" Height="16" Margin="0,0,7,0">
+                                                <Path Data="{StaticResource Icon.Copy}"
+                                                      Style="{StaticResource Icon.Path}"
+                                                      Stroke="{StaticResource Brush.TextSecondary}"/>
+                                            </Viewbox>
+                                            <TextBlock Text="Copy" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <!--
+                                    The burned-in address is a fact about the
+                                    hardware, not a second value the user can
+                                    choose from, so it is one quiet sentence
+                                    rather than a column beside the address in
+                                    use. When the driver will not report it, the
+                                    sentence still reads as a sentence.
+                                -->
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,4,0,0"
+                                           TextTrimming="CharacterEllipsis">
+                                    <Run Text="Burned-in hardware address "/>
+                                    <Run Text="{Binding SelectedAdapter.OriginalMac, Mode=OneWay, FallbackValue=not reported by the driver, TargetNullValue=not reported by the driver}"
+                                         FontFamily="{StaticResource Font.Mono}"
+                                         Foreground="{StaticResource Brush.TextSecondary}"/>
+                                    <Run Text=" — read-only"/>
+                                </TextBlock>
+
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,6,0,0"
+                                           MaxWidth="400"
+                                           Visibility="{Binding SelectedAdapter.OriginalMac, Converter={StaticResource TextToCollapsed}}"
+                                           Text="This adapter's driver does not report its burned-in address. BigRat writes it down the first time it sees this adapter without an override."/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Bottom">
+                                <Button Style="{StaticResource Button.Primary}"
+                                        Tag="MAC Changer"
+                                        Click="NavigateClick"
+                                        IsEnabled="{Binding HasSelection}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Open MAC Changer" VerticalAlignment="Center"/>
+                                        <Viewbox Width="16" Height="16" Margin="8,0,0,0">
+                                            <Path Data="{StaticResource Icon.ArrowRight}"
+                                                  Style="{StaticResource Icon.Path}"
+                                                  Stroke="{StaticResource Brush.TextOnAccent}"/>
+                                        </Viewbox>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </Grid>
                     </StackPanel>
+                </Border>
 
-                    <!--
-                        ========================= Actions =========================
+                <!-- ========================= Connection ========================= -->
+                <!--
+                    What the adapter above is carrying right now.
 
-                        The page's three actions, in a row, at the foot of the
-                        card they act on. Refresh lives here rather than in a
-                        corner of the header because it acts on this card's
-                        contents, and because a lone icon with nothing aligned
-                        against it has nowhere to look like it belongs.
-                    -->
-                    <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
-                        <Button Style="{StaticResource Button.Primary}"
-                                Tag="MAC Changer"
-                                Click="NavigateClick"
-                                Margin="0,0,10,0"
-                                IsEnabled="{Binding HasSelection}">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0">
-                                    <Path Data="{StaticResource Icon.MacChanger}"
-                                          Style="{StaticResource Icon.Path}"
-                                          Stroke="{StaticResource Brush.TextOnAccent}"/>
-                                </Viewbox>
-                                <TextBlock Text="Change MAC address" VerticalAlignment="Center"/>
+                    Its own card rather than a row inside the hero, because
+                    everything in that card is a fixed fact about the adapter
+                    and this is the one thing on the page that is different
+                    every second.
+
+                    The figure is measured, not guessed at: Windows keeps a
+                    running byte total per interface, and this is the difference
+                    between two readings a second apart.
+                -->
+                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="CONNECTION" Style="{StaticResource Text.SectionLabel}"
+                                       VerticalAlignment="Center"/>
+
+                            <!--
+                                The state of the reading, not of the adapter.
+                                "Live" only once a figure has actually been
+                                measured; before that "Measuring" is the true
+                                answer, and when Windows reports no counters the
+                                card says so instead of pretending to measure.
+                            -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
+                                <!-- The mockup's live dot: a 7px positive pip with
+                                     a 1px ring expanding from 0.7 to 1.5 and
+                                     fading out over 2.4s. The ring lives in a
+                                     7px grid cell and is allowed to overflow
+                                     it, which is exactly what `inset:-3px`
+                                     does in the mockup. -->
+                                <Grid Width="7" Height="7" VerticalAlignment="Center">
+                                    <Ellipse x:Name="ConnDot" Width="7" Height="7"
+                                             Fill="{StaticResource Brush.TextTertiary}"/>
+                                    <Ellipse x:Name="ConnPulse"
+                                             Width="13" Height="13"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             Stroke="{StaticResource Brush.Positive}"
+                                             StrokeThickness="1"
+                                             Opacity="0"
+                                             Visibility="Collapsed"
+                                             IsHitTestVisible="False"
+                                             RenderTransformOrigin="0.5,0.5">
+                                        <Ellipse.RenderTransform>
+                                            <ScaleTransform x:Name="ConnPulseScale"
+                                                            ScaleX="0.7" ScaleY="0.7"/>
+                                        </Ellipse.RenderTransform>
+                                    </Ellipse>
+                                </Grid>
+                                <TextBlock x:Name="ConnState"
+                                           Margin="7,0,0,0"
+                                           Style="{StaticResource Text.Secondary}"
+                                           FontSize="12"
+                                           Text="Measuring"/>
                             </StackPanel>
-                        </Button>
+                        </Grid>
 
-                        <Button Style="{StaticResource Button.Secondary}"
-                                Click="RefreshClick"
-                                Margin="0,0,10,0"
-                                IsEnabled="{Binding IsNotBusy}"
-                                ToolTip="Ask Windows for the adapter list again">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0">
-                                    <Path Data="{StaticResource Icon.Refresh}"
-                                          Style="{StaticResource Icon.Path}"
-                                          Stroke="{StaticResource Brush.Text}"/>
-                                </Viewbox>
-                                <TextBlock Text="Refresh" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+                        <!-- No adapter: there are no counters to read. -->
+                        <TextBlock Style="{StaticResource Text.Secondary}"
+                                   Margin="0,14,0,0"
+                                   MaxWidth="320"
+                                   Visibility="{Binding HasNoSelection, Converter={StaticResource BoolToVisible}}"
+                                   Text="No adapter is selected, so there are no counters to read."/>
 
-                        <Button Style="{StaticResource Button.Secondary}"
-                                Tag="History"
-                                Click="NavigateClick"
-                                Margin="0,0,10,0">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0">
-                                    <Path Data="{StaticResource Icon.History}"
-                                          Style="{StaticResource Icon.Path}"
-                                          Stroke="{StaticResource Brush.Text}"/>
-                                </Viewbox>
-                                <TextBlock Text="History" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <!--
-                ========================= Connection =========================
-
-                What the adapter above is carrying right now.
-
-                Its own card rather than a row inside the hero card, because
-                everything in that card is a fixed fact about the adapter — its
-                name, its address, its gateway — and this is the one thing on
-                the page that is different every second. Mixing a live reading
-                into a block of standing facts invites the reader to treat it
-                as one of them.
-
-                The figure is measured, not guessed at: Windows keeps a running
-                byte total per interface, and this is the difference between
-                two readings a second apart. Nothing is sent anywhere to obtain
-                it, which is why the caption can say so.
-            -->
-            <Border Style="{StaticResource Card}" Margin="0,18,0,0"
-                    Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
-                <StackPanel>
-
-                    <!-- Heading, subtitle and the adapter's state -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Margin="0,0,16,0">
-                            <TextBlock Text="CONNECTION" Style="{StaticResource Text.SectionLabel}"/>
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       Margin="0,5,0,0"
-                                       Text="Sampled once a second from this adapter's own counters — never estimated, never sent anywhere."/>
-
-                            <!-- The figure. Both runs sit on the same baseline,
-                                 so the unit rides the number as it changes size. -->
+                        <StackPanel Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
+                            <!-- The figure. The unit rides the number's baseline. -->
                             <TextBlock Style="{StaticResource Text.Metric}"
-                                       Margin="0,10,0,0"
+                                       Margin="0,16,0,0"
                                        Visibility="{Binding Connection.HasReading, Converter={StaticResource BoolToVisible}}">
                                 <Run Text="{Binding Connection.DownText, Mode=OneWay}"/>
                                 <Run Text="Mbps down"
-                                     FontSize="14"
+                                     FontSize="13"
                                      FontWeight="Normal"
                                      Foreground="{StaticResource Brush.TextSecondary}"/>
                             </TextBlock>
 
-                            <!--
-                                Before there is anything to report. "Waiting" and
-                                "unavailable" are kept apart deliberately: one is
-                                the ordinary first second, the other is the card
-                                admitting it has no figure to give. A single
-                                "measuring" for both would claim an operation that
-                                is not happening.
-                            -->
+                            <!-- The ordinary first second, and the honest
+                                 admission that there is no figure to give. -->
                             <TextBlock Style="{StaticResource Text.Secondary}"
-                                       Margin="0,12,0,0"
+                                       Margin="0,16,0,0"
+                                       MaxWidth="320"
                                        Visibility="{Binding Connection.IsWaiting, Converter={StaticResource BoolToVisible}}"
                                        Text="Waiting for the first reading."/>
                             <TextBlock Style="{StaticResource Text.Secondary}"
-                                       Margin="0,12,0,0"
+                                       Margin="0,16,0,0"
+                                       MaxWidth="320"
                                        Visibility="{Binding Connection.IsUnavailable, Converter={StaticResource BoolToVisible}}"
                                        Text="Windows is not reporting byte counters for this adapter, so there is no figure to show."/>
-                        </StackPanel>
 
-                        <Border Grid.Column="1"
-                                Style="{StaticResource Chip}"
-                                VerticalAlignment="Top">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                         Fill="{Binding SelectedAdapter.Status, Converter={StaticResource StatusBrush}}"/>
-                                <TextBlock Margin="7,0,0,0"
-                                           VerticalAlignment="Center"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Text="{Binding SelectedAdapter.Status, FallbackValue=Unknown, TargetNullValue=Unknown}"
-                                           Foreground="{Binding SelectedAdapter.Status, Converter={StaticResource StatusBrush}}"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <!--
-                        The trend. Hidden until there are two samples, which is
-                        the fewest a line can be drawn from — an empty box with
-                        an axis under it would look like a reading of zero.
-                    -->
-                    <StackPanel Margin="0,18,0,0"
-                                Visibility="{Binding Connection.HasSeries, Converter={StaticResource BoolToVisible}}">
-                        <controls:Sparkline Height="56"
-                                            Values="{Binding Connection.Series}"
-                                            LineBrush="{StaticResource Brush.Info}"
-                                            SurfaceBrush="{StaticResource Brush.Card}"/>
-                        <Grid Margin="0,7,0,0">
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       FontSize="10.5"
-                                       HorizontalAlignment="Left"
-                                       Text="{Binding Connection.WindowLabel, Mode=OneWay}"/>
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       FontSize="10.5"
-                                       HorizontalAlignment="Right"
-                                       Text="now"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <!--
-                        The three figures. Down and up are the live pair; link
-                        rate is the adapter's own negotiated ceiling and does
-                        not move, which is why it is the one of the three
-                        without an arrow.
-                    -->
-                    <Grid Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Margin="0,0,16,0">
-                            <TextBlock Text="DOWN" Style="{StaticResource Text.SectionLabel}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <Viewbox Width="12" Height="12" Margin="0,0,7,0">
-                                    <Path Data="{StaticResource Icon.ArrowDown}"
-                                          Style="{StaticResource Icon.Path}"
-                                          Stroke="{StaticResource Brush.TextSecondary}"/>
-                                </Viewbox>
-                                <TextBlock Style="{StaticResource Text.Mono}"
-                                           Text="{Binding Connection.DownText, Mode=OneWay}"/>
-                                <TextBlock Style="{StaticResource Text.Secondary}"
-                                           Margin="6,0,0,0"
-                                           Text="Mbps"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Margin="0,0,16,0">
-                            <TextBlock Text="UP" Style="{StaticResource Text.SectionLabel}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <Viewbox Width="12" Height="12" Margin="0,0,7,0">
-                                    <Path Data="{StaticResource Icon.ArrowUp}"
-                                          Style="{StaticResource Icon.Path}"
-                                          Stroke="{StaticResource Brush.TextSecondary}"/>
-                                </Viewbox>
-                                <TextBlock Style="{StaticResource Text.Mono}"
-                                           Text="{Binding Connection.UpText, Mode=OneWay}"/>
-                                <TextBlock Style="{StaticResource Text.Secondary}"
-                                           Margin="6,0,0,0"
-                                           Text="Mbps"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="LINK RATE" Style="{StaticResource Text.SectionLabel}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <TextBlock Style="{StaticResource Text.Mono}"
-                                           Text="{Binding SelectedAdapter.LinkSpeed, Converter={StaticResource LinkSpeed}}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <!-- ======================== Recent activity ======================== -->
-            <Border Style="{StaticResource Card}" Margin="0,18,0,0">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="RECENT ACTIVITY" Style="{StaticResource Text.SectionLabel}"
-                                   VerticalAlignment="Center"/>
-                        <Button Grid.Column="1"
-                                Style="{StaticResource Button.Ghost}"
-                                Tag="History"
-                                Click="NavigateClick"
-                                Visibility="{Binding HasHistory, Converter={StaticResource BoolToVisible}}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="View all" VerticalAlignment="Center"/>
-                                <Viewbox Width="14" Height="14" Margin="7,0,0,0">
-                                    <Path Data="{StaticResource Icon.ArrowRight}"
-                                          Style="{StaticResource Icon.Path}"
-                                          Stroke="{StaticResource Brush.TextSecondary}"/>
-                                </Viewbox>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-
-                    <!--
-                        Empty state. It is the first thing a new user sees, so
-                        it explains what will appear here rather than reading
-                        like an error.
-                    -->
-                    <StackPanel Margin="0,18,0,4"
-                                Visibility="{Binding HasNoHistory, Converter={StaticResource BoolToVisible}}">
-                        <TextBlock Style="{StaticResource Text.Body}"
-                                   Text="Nothing has been recorded yet."/>
-                        <TextBlock Style="{StaticResource Text.Secondary}"
-                                   Margin="0,6,0,0"
-                                   Text="Every change and restore you run will be listed here with its result. BigRat keeps them for next time, unless you turn that off in Settings."/>
-                    </StackPanel>
-
-                    <!-- The five newest, not the whole record. Now that history
-                         outlives the session the list behind this card can run
-                         to a hundred entries, and a landing page is a glance at
-                         what just happened rather than a log to read — the
-                         History page is where the whole thing belongs. -->
-                    <ItemsControl Margin="0,16,0,0"
-                                  ItemsSource="{Binding RecentActivity}"
-                                  Visibility="{Binding HasHistory, Converter={StaticResource BoolToVisible}}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,0,0,14">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Result dot: the same colour language as
-                                         the status chips elsewhere. -->
-                                    <Ellipse Width="6" Height="6" Margin="0,6,0,0"
-                                             VerticalAlignment="Top"
-                                             Fill="{Binding Outcome, Converter={StaticResource StatusBrush}}"/>
-
-                                    <StackPanel Grid.Column="1" Margin="12,0,12,0">
-                                        <TextBlock Style="{StaticResource Text.BodyStrong}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Text="{Binding AdapterName}"/>
-                                        <TextBlock Style="{StaticResource Text.MonoSecondary}"
-                                                   FontSize="12"
-                                                   Margin="0,4,0,0"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Text="{Binding Change}"/>
-                                        <TextBlock Style="{StaticResource Text.Secondary}"
-                                                   FontSize="11"
-                                                   Margin="0,4,0,0"
-                                                   Visibility="{Binding Message, Converter={StaticResource TextToVisible}}"
-                                                   Text="{Binding Message}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2" HorizontalAlignment="Right">
-                                        <TextBlock Style="{StaticResource Text.Secondary}"
-                                                   FontSize="11"
-                                                   HorizontalAlignment="Right"
-                                                   Text="{Binding Outcome}"
-                                                   Foreground="{Binding Outcome, Converter={StaticResource StatusBrush}}"/>
-                                        <TextBlock Style="{StaticResource Text.Secondary}"
-                                                   FontSize="11"
-                                                   Margin="0,4,0,0"
-                                                   HorizontalAlignment="Right"
-                                                   Text="{Binding Time}"/>
-                                    </StackPanel>
+                            <StackPanel Visibility="{Binding Connection.HasSeries, Converter={StaticResource BoolToVisible}}">
+                                <controls:Sparkline Height="132"
+                                                    Margin="0,16,0,0"
+                                                    Values="{Binding Connection.Series}"
+                                                    LineBrush="{DynamicResource Brush.AccentText}"
+                                                    SurfaceBrush="{StaticResource Brush.Card}"
+                                                    AxisBrush="{StaticResource Brush.ChartGrid}"
+                                                    LabelBrush="{StaticResource Brush.TextTertiary}"/>
+                                <Grid Margin="0,8,0,0">
+                                    <TextBlock Style="{StaticResource Text.Secondary}"
+                                               FontSize="12"
+                                               Foreground="{StaticResource Brush.TextTertiary}"
+                                               HorizontalAlignment="Left">
+                                        <Run Text="{Binding Connection.WindowLabel, Mode=OneWay}"/>
+                                        <Run Text=" · log scale"/>
+                                    </TextBlock>
+                                    <TextBlock Style="{StaticResource Text.Secondary}"
+                                               FontSize="12"
+                                               Foreground="{StaticResource Brush.TextTertiary}"
+                                               HorizontalAlignment="Right"
+                                               Text="{Binding Connection.PeakText, Mode=OneWay}"/>
                                 </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
+                            </StackPanel>
 
+                            <Border Style="{StaticResource Divider}" Margin="0,16,0,14"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,14,0">
+                                    <TextBlock Text="UP" Style="{StaticResource Text.SectionLabel}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <TextBlock Style="{StaticResource Text.Mono}"
+                                                   Text="{Binding Connection.UpText, Mode=OneWay}"/>
+                                        <TextBlock Style="{StaticResource Text.Secondary}"
+                                                   Margin="6,0,0,0"
+                                                   Text="Mbps"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="LINK RATE" Style="{StaticResource Text.SectionLabel}"/>
+                                    <TextBlock Style="{StaticResource Text.Mono}"
+                                               Margin="0,5,0,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               Text="{Binding SelectedAdapter.LinkSpeed, Converter={StaticResource LinkSpeed}}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ======================== Recent activity ======================== -->
+                <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="RECENT ACTIVITY" Style="{StaticResource Text.SectionLabel}"
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource Button.Link}"
+                                    Tag="History"
+                                    Click="NavigateClick"
+                                    Visibility="{Binding HasHistory, Converter={StaticResource BoolToVisible}}">
+                                <TextBlock Text="View all"/>
+                            </Button>
+                        </Grid>
+
+                        <!-- Empty state: the first thing a new user sees, so it
+                             explains what will appear rather than reading like
+                             an error. -->
+                        <StackPanel Margin="0,10,0,0"
+                                    HorizontalAlignment="Center"
+                                    Visibility="{Binding HasNoHistory, Converter={StaticResource BoolToVisible}}">
+                            <Border Width="46" Height="46"
+                                    CornerRadius="13"
+                                    Background="{StaticResource Brush.Elevated}"
+                                    HorizontalAlignment="Center">
+                                <Viewbox Width="22" Height="22"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource Icon.History}"
+                                          Style="{StaticResource Icon.Path}"
+                                          Stroke="{StaticResource Brush.TextSecondary}"/>
+                                </Viewbox>
+                            </Border>
+                            <TextBlock Style="{StaticResource Text.CardTitle}"
+                                       FontSize="13.5"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,13,0,0"
+                                       Text="Nothing recorded yet"/>
+                            <TextBlock Style="{StaticResource Text.Secondary}"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       MaxWidth="240"
+                                       Margin="0,4,0,0"
+                                       Text="Changes you make show up here, with the address that was written and whether it verified."/>
+                        </StackPanel>
+
+                        <!-- The five newest, not the whole record: a landing
+                             page is a glance at what just happened, and the
+                             History page is where the log belongs. -->
+                        <ItemsControl Margin="0,4,0,0"
+                                      AlternationCount="1000"
+                                      ItemsSource="{Binding RecentActivity}"
+                                      Visibility="{Binding HasHistory, Converter={StaticResource BoolToVisible}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <!-- One divider *between* rows, never
+                                             above the first: the mockup's
+                                             `.event + .event`. -->
+                                        <Border>
+                                            <Border.Style>
+                                                <Style TargetType="Border" BasedOn="{StaticResource Divider}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="True">
+                                                            <DataTrigger.Binding>
+                                                                <MultiBinding Converter="{StaticResource ItemPosition}"
+                                                                              ConverterParameter="first">
+                                                                    <Binding Path="(ItemsControl.AlternationIndex)"
+                                                                             RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
+                                                                    <Binding Path="Items.Count"
+                                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                                </MultiBinding>
+                                                            </DataTrigger.Binding>
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+
+                                        <Grid Margin="0,11">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Ellipse Width="7" Height="7" Margin="0,6,11,0"
+                                                     VerticalAlignment="Top"
+                                                     Fill="{Binding OutcomeTone, Converter={StaticResource StatusBrush}}"/>
+
+                                            <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                                <TextBlock Style="{StaticResource Text.BodyStrong}"
+                                                           FontSize="13"
+                                                           FontWeight="Medium"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding ActivityTitle}"/>
+                                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                                           FontSize="12"
+                                                           Margin="0,1,0,0"
+                                                           TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Text="{Binding ActivitySub}"/>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="2"
+                                                       Style="{StaticResource Text.Secondary}"
+                                                       Foreground="{StaticResource Brush.TextTertiary}"
+                                                       FontSize="12"
+                                                       Text="{Binding ActivityTime}"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

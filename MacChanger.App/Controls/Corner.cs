@@ -9,7 +9,7 @@ namespace MacChanger.App.Controls;
 /// Normally a derived style can restyle everything about a control except the
 /// shape drawn inside the template: <c>Button.Base</c> draws a
 /// <c>Border</c> with <c>CornerRadius="{StaticResource Radius.Control}"</c>, and
-/// <c>Button.Row</c> inherits that template, so it can only ever be as round as
+/// <c>Button.Link</c> inherits that template, so it can only ever be as round as
 /// its ancestor. The alternatives are worse — duplicating the whole template
 /// per variant, or reaching for <c>ButtonChrome</c> and re-deriving it — so the
 /// radius is lifted onto an attached property instead. The template reads it

@@ -1,59 +1,58 @@
-# ---------------------------------------------------------------------------
-# Build output
-# ---------------------------------------------------------------------------
+# .NET build output
 [Bb]in/
 [Oo]bj/
-[Dd]ebug/
-[Rr]elease/
-*.dll
-*.pdb
-*.exe
+artifacts/
+publish/
+TestResults/
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
 
-# ---------------------------------------------------------------------------
-# IDE and editor state
-# ---------------------------------------------------------------------------
+# Visual Studio and other IDE state
 .vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
 .idea/
 .vscode/
-*.user
-*.suo
-*.userprefs
 
-# ---------------------------------------------------------------------------
-# Test results
-# ---------------------------------------------------------------------------
-[Tt]est[Rr]esult*/
-*.trx
-*.coverage
-coverage*.xml
-
-# ---------------------------------------------------------------------------
-# NuGet
-# ---------------------------------------------------------------------------
-*.nupkg
+# NuGet/package output
 packages/
+*.nupkg
+*.snupkg
 
-# ---------------------------------------------------------------------------
-# Local machine state
-#
-# BigRat keeps its preferences and its operation record under
-# %APPDATA%\BigRat\ — settings.json and history.json — which is outside the
-# repository. They are listed here as well so that a copy made beside the
-# executable, which would hold this machine's adapter ids and the addresses
-# written to them, can never be committed by accident.
-# ---------------------------------------------------------------------------
-settings.json
-history.json
+# Local logs, caches, and temporary files
+*.cache
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+~$*
 
-# ---------------------------------------------------------------------------
-# AI assistant and local tooling configuration — never published
-# ---------------------------------------------------------------------------
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+secrets.json
+*.secrets.json
+
+# Machine-specific assistant/tool configuration
+.agents/
+.aws/
 .claude/
-CLAUDE.md
-AGENTS.md
+.codex/
 
-# ---------------------------------------------------------------------------
-# OS clutter
-# ---------------------------------------------------------------------------
+# Local design previews and source backups
+/UI_Backup/
+*.mockup.html
+*.preview.html
+/bigrat.jpg
+
+# Operating-system metadata
 .DS_Store
 Thumbs.db
+Desktop.ini

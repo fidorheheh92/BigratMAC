@@ -146,12 +146,26 @@ public sealed class ConnectionMonitor : INotifyPropertyChanged
     public bool HasSeries => snapshot.Length > 1;
 
     /// <summary>
-    /// The age of the oldest sample on the sparkline, for the axis label.
-    ///
-    /// It counts up to the full window rather than always claiming sixty
-    /// seconds, so a line that has only been running for eight seconds says so.
+    /// The fixed time-window label used by the mockup. During startup the line
+    /// fills into this sixty-second window rather than changing the caption.
     /// </summary>
-    public string WindowLabel => $"{(snapshot.Length > 0 ? snapshot.Length - 1 : 0)} s ago";
+    public string WindowLabel => "Last 60 seconds";
+
+    /// <summary>
+    /// The tallest sample in the window, for the chart caption. Blank until
+    /// there is something to describe rather than "peak 0.00".
+    /// </summary>
+    public string PeakText
+    {
+        get
+        {
+            if (snapshot.Length == 0) return string.Empty;
+            var peak = 0.0;
+            foreach (var value in snapshot)
+                if (double.IsFinite(value) && value > peak) peak = value;
+            return $"peak {Format(peak)} Mbps";
+        }
+    }
 
     /// <summary>
     /// Rates are shown to three significant figures at most and fewer as they
@@ -235,6 +249,7 @@ public sealed class ConnectionMonitor : INotifyPropertyChanged
         OnPropertyChanged(nameof(Series));
         OnPropertyChanged(nameof(HasSeries));
         OnPropertyChanged(nameof(WindowLabel));
+        OnPropertyChanged(nameof(PeakText));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

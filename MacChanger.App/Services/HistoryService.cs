@@ -15,7 +15,8 @@ public sealed record HistoryEntry(
     string From,
     string To,
     bool Success,
-    string Message)
+    string Message,
+    bool? Verified = null)
 {
     /// <summary>
     /// When this ran, in the form the pages show it.
@@ -43,6 +44,87 @@ public sealed record HistoryEntry(
     [JsonIgnore] public string Change => $"{From}  →  {To}";
 
     [JsonIgnore] public string Outcome => Success ? "Succeeded" : "Failed";
+
+    // ------------------------------------------------- dashboard presentation
+    //
+    // The landing page is a glance, not the log: one short line per operation
+    // instead of the sentence the MAC Changer page writes under the button.
+    // The title is derived from the action BigRat actually recorded, so an
+    // entry from an older version still says what it was.
+
+    /// <summary>True only when an apply/restore succeeded *and* the adapter reported the new address.</summary>
+    [JsonIgnore] public bool IsVerified => Success && Verified == true;
+
+    /// <summary>
+    /// "Address changed", "Original restored" or the matching failure. The
+    /// mockup's wording, chosen from the recorded action rather than invented
+    /// for the page.
+    /// </summary>
+    [JsonIgnore]
+    public string ActivityTitle =>
+        Action.Contains("Restore", StringComparison.OrdinalIgnoreCase)
+            ? (Success ? "Original restored" : "Restore failed")
+            : (Success ? "Address changed" : "Change failed");
+
+    /// <summary>
+    /// The quiet second line: the address that was written, plus whether the
+    /// adapter confirmed it, or the reason the write did not happen.
+    /// </summary>
+    [JsonIgnore]
+    public string ActivitySub =>
+        !Success ? Message
+        : Verified switch
+        {
+            true => $"{To} · verified",
+            false => $"{To} · not verified",
+            _ => To,
+        };
+
+    /// <summary>Short clock time for the dashboard row.</summary>
+    [JsonIgnore] public string ActivityTime => Timestamp.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+
+    // --------------------------------------------------- history presentation
+
+    /// <summary>"Address changed · &lt;adapter&gt;", as the timeline title.</summary>
+    [JsonIgnore] public string TimelineTitle => $"{ActivityTitle} · {AdapterName}";
+
+    /// <summary>Today's entries say "Today"; older ones carry their date.</summary>
+    [JsonIgnore]
+    public string TimelineTime
+    {
+        get
+        {
+            var local = Timestamp.ToLocalTime();
+            return local.Date == DateTimeOffset.Now.Date
+                ? $"Today {local.ToString("HH:mm", CultureInfo.InvariantCulture)}"
+                : local.ToString("MMM d, HH:mm", CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>The address move, or what was attempted when the write failed.</summary>
+    [JsonIgnore] public string TimelineMac => Success ? $"{From} → {To}" : $"Attempted {To}";
+
+    /// <summary>The driver's own account of a failure; empty on success.</summary>
+    [JsonIgnore] public string TimelineNote => Success ? string.Empty : Message;
+
+    /// <summary>
+    /// The chip's word. "Verified" is only claimed when verification actually
+    /// happened; a write whose result was never confirmed says "Not verified"
+    /// in warning colour instead of borrowing the success wording.
+    /// </summary>
+    [JsonIgnore]
+    public string OutcomeLabel =>
+        !Success ? "Rejected"
+        : Verified == true ? "Verified"
+        : Verified == false ? "Not verified"
+        : "Succeeded";
+
+    /// <summary>A word the status-brush converter already understands.</summary>
+    [JsonIgnore]
+    public string OutcomeTone =>
+        !Success ? "Failed"
+        : Verified == false ? "Warning"
+        : "Succeeded";
 }
 
 /// <summary>
@@ -124,11 +206,18 @@ public sealed class HistoryService
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Record(string adapterName, string action, string from, string to, bool success, string message)
+    public void Record(
+        string adapterName,
+        string action,
+        string from,
+        string to,
+        bool success,
+        string message,
+        bool? verified = null)
     {
         if (!Enabled) return;
 
-        Entries.Insert(0, new HistoryEntry(DateTimeOffset.Now, adapterName, action, from, to, success, message));
+        Entries.Insert(0, new HistoryEntry(DateTimeOffset.Now, adapterName, action, from, to, success, message, verified));
         while (Entries.Count > MaxEntries) Entries.RemoveAt(Entries.Count - 1);
         Save();
         Changed?.Invoke(this, EventArgs.Empty);

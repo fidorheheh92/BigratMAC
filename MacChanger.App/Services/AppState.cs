@@ -6,6 +6,19 @@ using MacChanger.Core;
 namespace MacChanger.App.Services;
 
 /// <summary>
+/// Everything the application's confirmation dialog needs to draw itself:
+/// what is about to happen, and the two addresses when the action moves one.
+/// </summary>
+public sealed record ConfirmRequest(
+    string Title,
+    string Body,
+    string ConfirmText,
+    string? FromAddress = null,
+    string? ToAddress = null,
+    string? Note = null,
+    bool Destructive = false);
+
+/// <summary>
 /// The state every page shares: the services they call, the adapter list they
 /// display, which adapter is selected, and the message on the status bar.
 ///
@@ -25,6 +38,11 @@ public sealed class AppState : INotifyPropertyChanged
     {
         Service = new WindowsMacChangeService(Discovery, new WindowsCommandExecutor());
         Settings = SettingsStore.Load();
+
+        // A file written before Amber was retired still says "Amber". Store the
+        // name of the colour that is actually painted, so the picker has a
+        // swatch to select and the next save writes what the user sees.
+        Settings.Accent = AccentPalette.Find(Settings.Accent).Name;
 
         // The record lives in the same folder as the preferences, and its
         // switch is a preference, so it is built here rather than in a field
@@ -185,6 +203,21 @@ public sealed class AppState : INotifyPropertyChanged
 
     public bool IsNotBusy => busyCount == 0;
 
+    /// <summary>
+    /// True while an adapter scan is under way. Kept apart from
+    /// <see cref="IsBusy"/> because a page should say "scanning" rather than
+    /// "no adapters" only during a scan, not while a write or hardware read
+    /// happens to be running too.
+    /// </summary>
+    public bool IsScanningAdapters => isScanning;
+
+    /// <summary>
+    /// True when the last adapter scan threw before it could answer. Distinct
+    /// from a scan that finished and genuinely found nothing: the empty page
+    /// should not blame the machine for the query failing.
+    /// </summary>
+    public bool ScanFailed => scanFailed;
+
     public void BeginWork()
     {
         busyCount++;
@@ -199,6 +232,20 @@ public sealed class AppState : INotifyPropertyChanged
 
     /// <summary>Set by the shell so pages can send the user to another page.</summary>
     public Action<string>? Navigate { get; set; }
+
+    /// <summary>
+    /// Set by the shell. Pages ask for a confirmation and await the answer;
+    /// the dialog itself lives in the window so every page gets the same one
+    /// instead of a stock MessageBox with the operating system's styling.
+    /// </summary>
+    public Func<ConfirmRequest, Task<bool>>? Confirm { get; set; }
+
+    /// <summary>Raised when a page has a short, concrete outcome to announce.</summary>
+    public event Action<string, bool>? ToastRequested;
+
+    /// <summary>Shows a transient result at the foot of the window.</summary>
+    public void ShowToast(string message, bool isError = false) =>
+        ToastRequested?.Invoke(message, isError);
 
     /// <summary>Raised when something failed and the shell should tell the user.</summary>
     public event EventHandler<string>? Error;
@@ -219,6 +266,9 @@ public sealed class AppState : INotifyPropertyChanged
     {
         if (isScanning) return;
         isScanning = true;
+        scanFailed = false;
+        OnPropertyChanged(nameof(IsScanningAdapters));
+        OnPropertyChanged(nameof(ScanFailed));
         BeginWork();
         StatusMessage = "Scanning network adapters…";
         try
@@ -243,12 +293,15 @@ public sealed class AppState : INotifyPropertyChanged
         {
             Adapters.Clear();
             SelectedAdapter = null;
+            scanFailed = true;
             StatusMessage = "Adapter scan failed.";
+            OnPropertyChanged(nameof(ScanFailed));
             ReportError(ex.Message);
         }
         finally
         {
             isScanning = false;
+            OnPropertyChanged(nameof(IsScanningAdapters));
             EndWork();
         }
     }
@@ -322,11 +375,18 @@ public sealed class AppState : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// True while a WMI hardware read is running. The page shows its skeleton
+    /// rather than the previous result while this is set.
+    /// </summary>
+    public bool IsReadingHardware => isReadingHardware;
+
     /// <summary>Re-reads the hardware identifiers from WMI. Never modifies anything.</summary>
     public async Task LoadHardwareInfoAsync()
     {
         if (isReadingHardware) return;
         isReadingHardware = true;
+        OnPropertyChanged(nameof(IsReadingHardware));
         BeginWork();
         StatusMessage = "Reading hardware information…";
         try
@@ -354,11 +414,13 @@ public sealed class AppState : INotifyPropertyChanged
         finally
         {
             isReadingHardware = false;
+            OnPropertyChanged(nameof(IsReadingHardware));
             EndWork();
         }
     }
 
     bool isScanning;
+    bool scanFailed;
     bool isReadingHardware;
 
     /// <summary>Persists preferences and reports whether the file was really written.</summary>

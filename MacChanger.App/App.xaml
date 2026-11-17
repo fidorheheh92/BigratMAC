@@ -21,10 +21,14 @@
             <conv:ColorToBrushConverter x:Key="ColorToBrush"/>
             <conv:LinkSpeedConverter x:Key="LinkSpeed"/>
             <conv:SectionIconConverter x:Key="SectionIcon"/>
+            <conv:AdapterIconConverter x:Key="AdapterIcon"/>
+            <conv:InterfaceTypeConverter x:Key="InterfaceTypeText"/>
+            <conv:StatusTextConverter x:Key="StatusText"/>
             <conv:BoolToVisibilityConverter x:Key="BoolToVisible"/>
             <conv:BoolToVisibilityConverter x:Key="BoolToHidden" Invert="True"/>
             <conv:EmptyStringToVisibilityConverter x:Key="TextToVisible"/>
             <conv:EmptyStringToVisibilityConverter x:Key="TextToCollapsed" Invert="True"/>
+            <conv:ItemPositionConverter x:Key="ItemPosition"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

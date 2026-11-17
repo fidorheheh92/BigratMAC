@@ -8,234 +8,435 @@
         ====================================================================
 
         Grouped sections, each with a heading, a one-line explanation and then
-        its controls — so the page reads as four short paragraphs rather than a
+        its controls — so the page reads as five short paragraphs rather than a
         wall of switches.
 
-        Every row is label-above-description with the control beside it, which
-        is why the descriptions can be a full sentence without the page turning
-        into a column of grey text.
-    -->
-    <ScrollViewer Style="{StaticResource ScrollViewer.Page}">
-        <StackPanel Margin="{StaticResource Pad.Page}" MaxWidth="700">
+        The save bar sits outside the scroll area, pinned to the foot of the
+        page. Save used to live inside the Storage card, which meant it moved
+        away from the switch you had just changed and read as a file operation
+        rather than as "keep what I just did".
 
-            <!-- ============================== Header ============================== -->
-            <StackPanel Margin="0,0,0,22">
-                <TextBlock Text="Settings" Style="{StaticResource Text.PageTitle}"/>
-                <TextBlock Style="{StaticResource Text.PageSubtitle}"
-                           Text="Appearance and behaviour preferences. They are stored on this machine only, and take effect straight away."/>
+        Nothing here claims a preference was stored until the file system
+        actually said so: the bar reports what Save returned.
+    -->
+    <Grid Margin="{StaticResource Pad.Page}" MaxWidth="740">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" Style="{StaticResource ScrollViewer.Page}">
+            <StackPanel Margin="0,0,0,12">
+
+                <!-- ============================== Header ============================== -->
+                <StackPanel Margin="0,0,0,20">
+                    <TextBlock Text="Settings" Style="{StaticResource Text.PageTitle}"/>
+                    <TextBlock Style="{StaticResource Text.PageSubtitle}"
+                               Text="Preferences for this installation. They live under %APPDATA%\BigRat and stay on this machine."/>
+                </StackPanel>
+
+                <!-- ============================ Appearance ============================ -->
+                <Border Style="{StaticResource Card}" Padding="20,18">
+                    <StackPanel>
+                        <TextBlock Text="APPEARANCE" Style="{StaticResource Text.SectionLabel}"/>
+
+                        <Grid Margin="0,18,0,13">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,18,0">
+                                <TextBlock Text="Accent colour"
+                                           Style="{StaticResource Text.BodyStrong}"
+                                           FontSize="13.5"
+                                           FontWeight="Medium"/>
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,2,0,0"
+                                           LineHeight="17"
+                                           HorizontalAlignment="Left"
+                                           MaxWidth="360"
+                                           Text="Applied across the whole application as soon as you pick one."/>
+                            </StackPanel>
+                        </Grid>
+
+                        <ListBox Margin="-4,-4,-4,-16"
+                                 ItemsSource="{x:Static svc:AccentPalette.Options}"
+                                 SelectedValuePath="Name"
+                                 SelectedValue="{Binding Settings.Accent, Mode=TwoWay}"
+                                 SelectionChanged="AccentChanged"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Padding="4,4,4,0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ItemContainerStyle="{StaticResource ListBoxItem.Accent}">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <Grid Width="46" Height="46">
+                                            <!--
+                                                The mockup's two-ring selection:
+                                                a 2px card gap then a 2px text
+                                                ring, painted outside the swatch
+                                                so it does not move the row.
+                                            -->
+                                            <Border Width="46" Height="46"
+                                                    Margin="-4"
+                                                    CornerRadius="15"
+                                                    BorderThickness="2"
+                                                    BorderBrush="{StaticResource Brush.Text}"
+                                                    Background="{StaticResource Brush.Card}"
+                                                    IsHitTestVisible="False">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                                                         Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                            </Border>
+
+                                            <Border Width="38" Height="38"
+                                                    CornerRadius="11"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    RenderTransformOrigin="0.5,0.5"
+                                                    Background="{Binding Color, Converter={StaticResource ColorToBrush}}">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform/>
+                                                </Border.RenderTransform>
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Trigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                                             To="1.06" Duration="0:0:0.15"
+                                                                                             EasingFunction="{StaticResource Ease.Out}"/>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                                                             To="1.06" Duration="0:0:0.15"
+                                                                                             EasingFunction="{StaticResource Ease.Out}"/>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </Trigger.EnterActions>
+                                                                <Trigger.ExitActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                                             To="1" Duration="0:0:0.15"
+                                                                                             EasingFunction="{StaticResource Ease.Out}"/>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                                                             To="1" Duration="0:0:0.15"
+                                                                                             EasingFunction="{StaticResource Ease.Out}"/>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </Trigger.ExitActions>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+
+                                                <Path Data="{StaticResource Icon.Check}"
+                                                      Width="16" Height="16"
+                                                      Stroke="{StaticResource Brush.TextOnAccent}"
+                                                      StrokeThickness="2.8"
+                                                      Stretch="Uniform"
+                                                      Margin="11">
+                                                    <Path.Style>
+                                                        <Style TargetType="Path" BasedOn="{StaticResource Icon.Path}">
+                                                            <Setter Property="Opacity" Value="0"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                                                             Value="True">
+                                                                    <Setter Property="Opacity" Value="1"/>
+                                                                    <DataTrigger.EnterActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                                 To="1" Duration="0:0:0.15"/>
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </DataTrigger.EnterActions>
+                                                                    <DataTrigger.ExitActions>
+                                                                        <BeginStoryboard>
+                                                                            <Storyboard>
+                                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                                 To="0" Duration="0:0:0.15"/>
+                                                                            </Storyboard>
+                                                                        </BeginStoryboard>
+                                                                    </DataTrigger.ExitActions>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Path.Style>
+                                                </Path>
+                                            </Border>
+                                        </Grid>
+
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="12"
+                                                   Margin="0,8,0,0"
+                                                   HorizontalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                                                     Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============================= Behaviour ============================ -->
+                <Border Style="{StaticResource Card}" Padding="20,18" Margin="0,22,0,0">
+                    <StackPanel>
+                        <TextBlock Text="BEHAVIOUR" Style="{StaticResource Text.SectionLabel}"/>
+
+                        <Grid Margin="0,17,0,13">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,18,0">
+                                <TextBlock Text="Restart the adapter after writing"
+                                           Style="{StaticResource Text.BodyStrong}"
+                                           FontSize="13.5"
+                                           FontWeight="Medium"/>
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,2,0,0"
+                                           LineHeight="17"
+                                           HorizontalAlignment="Left"
+                                           MaxWidth="360"
+                                           Text="Needed on most drivers before a new address takes effect."/>
+                            </StackPanel>
+                            <CheckBox Grid.Column="1"
+                                      Style="{StaticResource Toggle.Switch}"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding Settings.RestartAdapterAfterChange, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <Border Style="{StaticResource Divider}"/>
+
+                        <Grid Margin="0,13,0,13">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,18,0">
+                                <TextBlock Text="Ask before applying"
+                                           Style="{StaticResource Text.BodyStrong}"
+                                           FontSize="13.5"
+                                           FontWeight="Medium"/>
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,2,0,0"
+                                           LineHeight="17"
+                                           HorizontalAlignment="Left"
+                                           MaxWidth="360"
+                                           Text="Show a confirmation with the exact address that will be written."/>
+                            </StackPanel>
+                            <CheckBox Grid.Column="1"
+                                      Style="{StaticResource Toggle.Switch}"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding Settings.ConfirmBeforeApplying, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <Border Style="{StaticResource Divider}"/>
+
+                        <Grid Margin="0,13,0,13">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,18,0">
+                                <TextBlock Text="Keep the 02 prefix"
+                                           Style="{StaticResource Text.BodyStrong}"
+                                           FontSize="13.5"
+                                           FontWeight="Medium"/>
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,2,0,0"
+                                           LineHeight="17"
+                                           HorizontalAlignment="Left"
+                                           MaxWidth="360"
+                                           Text="Generates addresses that are marked locally administered rather than pretending to be a vendor's."/>
+                            </StackPanel>
+                            <CheckBox Grid.Column="1"
+                                      Style="{StaticResource Toggle.Switch}"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding Settings.Use02FirstOctet, Mode=TwoWay}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- =============================== History =========================== -->
+                <Border Style="{StaticResource Card}" Padding="20,18" Margin="0,22,0,0">
+                    <StackPanel>
+                        <TextBlock Text="HISTORY" Style="{StaticResource Text.SectionLabel}"/>
+
+                        <Grid Margin="0,17,0,13">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,18,0">
+                                <TextBlock Text="Record changes"
+                                           Style="{StaticResource Text.BodyStrong}"
+                                           FontSize="13.5"
+                                           FontWeight="Medium"/>
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,2,0,0"
+                                           LineHeight="17"
+                                           HorizontalAlignment="Left"
+                                           MaxWidth="360"
+                                           Text="Keeps one line per write, including failures."/>
+                            </StackPanel>
+                            <CheckBox Grid.Column="1"
+                                      Style="{StaticResource Toggle.Switch}"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding Settings.KeepHistory, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <Border Style="{StaticResource Card.Well}" Margin="0,6,0,0">
+                            <StackPanel>
+                                <TextBlock Text="FILE" Style="{StaticResource Text.SectionLabel}"/>
+                                <TextBlock Style="{StaticResource Text.MonoSecondary}"
+                                           FontSize="12.5"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"
+                                           Text="{Binding History.FilePath}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============================== Storage ============================= -->
+                <Border Style="{StaticResource Card}" Padding="20,18" Margin="0,22,0,0">
+                    <StackPanel>
+                        <TextBlock Text="STORAGE" Style="{StaticResource Text.SectionLabel}"/>
+
+                        <Border Style="{StaticResource Card.Well}" Margin="0,10,0,0">
+                            <StackPanel>
+                                <TextBlock Text="PREFERENCES FILE" Style="{StaticResource Text.SectionLabel}"/>
+                                <TextBlock Style="{StaticResource Text.MonoSecondary}"
+                                           FontSize="12.5"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"
+                                           Text="{Binding SettingsStore.FilePath}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource Text.Secondary}"
+                                   Margin="0,10,0,0"
+                                   Text="Nothing is written outside this folder."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- =============================== About ============================== -->
+                <Border Style="{StaticResource Card}" Padding="20,18" Margin="0,22,0,0">
+                    <StackPanel>
+                        <TextBlock Text="ABOUT" Style="{StaticResource Text.SectionLabel}"/>
+
+                        <Grid Margin="0,17,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,18,0">
+                                <TextBlock Text="BigRat MAC Changer"
+                                           Style="{StaticResource Text.BodyStrong}"
+                                           FontSize="13.5"
+                                           FontWeight="Medium"/>
+                                <TextBlock Style="{StaticResource Text.Secondary}"
+                                           Margin="0,2,0,0"
+                                           LineHeight="17"
+                                           HorizontalAlignment="Left"
+                                           MaxWidth="360"
+                                           Text="Changes the network address Windows presents for an adapter, and puts the factory one back on request."/>
+                            </StackPanel>
+                            <Border Grid.Column="1"
+                                    Style="{StaticResource Chip}"
+                                    Height="26"
+                                    Padding="10,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock x:Name="VersionText"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource Brush.TextSecondary}"/>
+                            </Border>
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <TextBlock x:Name="RuntimeText"
+                                       Style="{StaticResource Text.MonoSecondary}"
+                                       FontSize="12.5"/>
+                            <TextBlock Text="·"
+                                       Style="{StaticResource Text.MonoSecondary}"
+                                       FontSize="12.5"
+                                       Margin="8,0,0,0"/>
+                            <TextBlock Text="Windows 10 / 11"
+                                       Style="{StaticResource Text.MonoSecondary}"
+                                       FontSize="12.5"
+                                       Margin="8,0,0,0"/>
+                            <TextBlock Text="·"
+                                       Style="{StaticResource Text.MonoSecondary}"
+                                       FontSize="12.5"
+                                       Margin="8,0,0,0"/>
+                            <TextBlock Text="No telemetry"
+                                       Style="{StaticResource Text.MonoSecondary}"
+                                       FontSize="12.5"
+                                       Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- The save bar: outside the scroll area, so it is always in reach.
+             The check fades in only after a write that actually landed, and
+             keeps its space while hidden so the label does not jump. -->
+        <Border Grid.Row="1" Margin="0,4,0,0"
+                Background="{StaticResource Brush.SaveBarFade}">
+        <Grid Margin="0,12,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Viewbox x:Name="SaveCheck" Width="15" Height="15" Margin="0,0,7,0">
+                    <Path Data="{StaticResource Icon.Check}"
+                          Style="{StaticResource Icon.Path}"
+                          Stroke="{StaticResource Brush.Positive}"/>
+                </Viewbox>
+                <TextBlock x:Name="SaveStateText"
+                           Style="{StaticResource Text.Secondary}"
+                           Text="All changes saved"/>
             </StackPanel>
 
-            <!-- ============================ Appearance ============================ -->
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="APPEARANCE" Style="{StaticResource Text.SectionLabel}"/>
-                    <TextBlock Style="{StaticResource Text.Secondary}"
-                               Margin="0,8,0,16"
-                               Text="The colour used for primary actions, the selected navigation row and important states. Changing it re-colours the whole application immediately; press Save to keep it for next time."/>
-
-                    <ListBox ItemsSource="{x:Static svc:AccentPalette.Options}"
-                             SelectedValuePath="Name"
-                             SelectedValue="{Binding Settings.Accent, Mode=TwoWay}"
-                             SelectionChanged="AccentChanged"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             Padding="0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ItemContainerStyle="{StaticResource ListBoxItem.Accent}">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel/>
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="16" Height="16" VerticalAlignment="Center"
-                                             Fill="{Binding Color, Converter={StaticResource ColorToBrush}}"/>
-                                    <TextBlock Text="{Binding Name}"
-                                               Margin="10,0,0,0"
-                                               VerticalAlignment="Center"
-                                               Style="{StaticResource Text.Body}"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </StackPanel>
-            </Border>
-
-            <!-- ============================= Behaviour ============================ -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="BEHAVIOUR" Style="{StaticResource Text.SectionLabel}"/>
-                    <TextBlock Style="{StaticResource Text.Secondary}"
-                               Margin="0,8,0,20"
-                               Text="What BigRat does around a change, and how much it checks with you first."/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox Style="{StaticResource Toggle.Switch}"
-                                  VerticalAlignment="Center"
-                                  IsChecked="{Binding Settings.RestartAdapterAfterChange, Mode=TwoWay}"/>
-                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                            <TextBlock Text="Restart the adapter after writing"
-                                       Style="{StaticResource Text.BodyStrong}"/>
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       Margin="0,4,0,0"
-                                       Text="A new address only takes effect once the adapter restarts, so the connection drops for a moment. Leave this on unless you would rather restart it yourself."/>
-                        </StackPanel>
-                    </Grid>
-
-                    <Border Style="{StaticResource Divider}" Margin="0,18,0,18"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox Style="{StaticResource Toggle.Switch}"
-                                  VerticalAlignment="Center"
-                                  IsChecked="{Binding Settings.ConfirmBeforeApplying, Mode=TwoWay}"/>
-                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                            <TextBlock Text="Ask before applying"
-                                       Style="{StaticResource Text.BodyStrong}"/>
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       Margin="0,4,0,0"
-                                       Text="Show the address the adapter is using and the one you are about to write, and wait for a yes before anything is changed."/>
-                        </StackPanel>
-                    </Grid>
-
-                    <Border Style="{StaticResource Divider}" Margin="0,18,0,18"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox Style="{StaticResource Toggle.Switch}"
-                                  VerticalAlignment="Center"
-                                  IsChecked="{Binding Settings.Use02FirstOctet, Mode=TwoWay}"/>
-                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                            <TextBlock Text="Prefer 02 as the first octet"
-                                       Style="{StaticResource Text.BodyStrong}"/>
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       Margin="0,4,0,0"
-                                       Text="Default for the Random button on the MAC Changer page. An address starting with 02 is locally administered, which is the conventional choice for a software-set address."/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <!-- =============================== History =========================== -->
-            <!--
-                Its own section rather than another row in Behaviour, because it
-                is the one preference with a file and a destructive control
-                attached to it, and both belong beside the switch that governs
-                them. The file path sits here rather than in Storage for the
-                same reason: Storage is about preferences, this is about the
-                record the switch below it decides whether to keep.
-            -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="HISTORY" Style="{StaticResource Text.SectionLabel}"/>
-                    <TextBlock Style="{StaticResource Text.Secondary}"
-                               Margin="0,8,0,20"
-                               Text="A record of what BigRat has done, so you can look back at it after the window has been closed."/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox Style="{StaticResource Toggle.Switch}"
-                                  VerticalAlignment="Center"
-                                  IsChecked="{Binding Settings.KeepHistory, Mode=TwoWay}"/>
-                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                            <TextBlock Text="Keep a history of changes"
-                                       Style="{StaticResource Text.BodyStrong}"/>
-                            <TextBlock Style="{StaticResource Text.Secondary}"
-                                       Margin="0,4,0,0"
-                                       Text="Each change and restore is written to the file below as it finishes, with which adapter it was and how it ended. Turn this off and nothing new is written — what is already there is left alone, and the History page can clear it whenever you want."/>
-                        </StackPanel>
-                    </Grid>
-
-                    <Border Style="{StaticResource Card.Well}" Margin="0,18,0,0">
-                        <TextBlock Style="{StaticResource Text.MonoSecondary}"
-                                   FontSize="12"
-                                   TextWrapping="Wrap"
-                                   Text="{Binding History.FilePath}"/>
-                    </Border>
-                </StackPanel>
-            </Border>
-
-            <!-- ============================== Storage ============================= -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="STORAGE" Style="{StaticResource Text.SectionLabel}"/>
-                    <TextBlock Style="{StaticResource Text.Secondary}"
-                               Margin="0,8,0,14"
-                               Text="Preferences are written to this file when you press Save, and again when BigRat closes."/>
-
-                    <Border Style="{StaticResource Card.Well}">
-                        <TextBlock Style="{StaticResource Text.MonoSecondary}"
-                                   FontSize="12"
-                                   TextWrapping="Wrap"
-                                   Text="{Binding SettingsStore.FilePath}"/>
-                    </Border>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
-                        <Button Style="{StaticResource Button.Primary}"
-                                Margin="0,0,14,0"
-                                Click="SaveClick">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0">
-                                    <Path Data="{StaticResource Icon.Check}"
-                                          Style="{StaticResource Icon.Path}"
-                                          Stroke="{StaticResource Brush.TextOnAccent}"/>
-                                </Viewbox>
-                                <TextBlock Text="Save preferences" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <TextBlock x:Name="SaveStatus"
-                                   VerticalAlignment="Center"
-                                   Style="{StaticResource Text.Secondary}"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- =============================== About ============================== -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="ABOUT" Style="{StaticResource Text.SectionLabel}"/>
-
-                    <Grid Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Text="Version" Style="{StaticResource Text.Secondary}"/>
-                        <TextBlock x:Name="VersionText" Grid.Column="1"
-                                   Style="{StaticResource Text.Mono}" FontSize="13"/>
-
-                        <TextBlock Grid.Row="1" Text="Runtime" Style="{StaticResource Text.Secondary}" Margin="0,10,0,0"/>
-                        <TextBlock x:Name="RuntimeText" Grid.Row="1" Grid.Column="1"
-                                   Style="{StaticResource Text.Mono}" FontSize="13" Margin="0,10,0,0"/>
-                    </Grid>
-
-                    <Border Style="{StaticResource Divider}" Margin="0,18,0,16"/>
-
-                    <TextBlock Style="{StaticResource Text.Secondary}"
-                               Text="BigRat changes the MAC address Windows reports for a network adapter by writing that adapter's registry override. It does not touch any other hardware identifier, and the Hardware ID page only ever reads."/>
-                </StackPanel>
-            </Border>
-
-        </StackPanel>
-    </ScrollViewer>
+            <Button Grid.Column="1"
+                    Style="{StaticResource Button.Primary}"
+                    Click="SaveClick"
+                    Content="Save preferences"/>
+        </Grid>
+        </Border>
+    </Grid>
 </UserControl>
