@@ -18,7 +18,7 @@ The application performs its work locally. It does not contain telemetry or call
 
 ## Screenshots
 
-Current v1.1 screenshots 
+![Current v1.1](imageofbigrattt.png)
 
 ## Requirements
 
